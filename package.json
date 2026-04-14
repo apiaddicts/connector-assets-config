@@ -1,0 +1,14 @@
+{
+  "name": "gaiax-config",
+  "version": "1.0.0",
+  "description": "Gaia-X Configuration Form for EDC — OpenDataSpace",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "js-yaml": "^4.1.0"
+  }
+}

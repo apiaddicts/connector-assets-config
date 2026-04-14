@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gaia-X Configuration Form</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">GX</div>
+      <div>
+        <h1>Gaia-X Configuration Form</h1>
+        <p>Generates EDC Assets + all Gaia-X Verifiable Credentials from an OpenAPI spec. Fields marked <span class="badge badge-auto">auto</span> are pre-filled from the spec. Fields marked <span class="badge badge-req">required</span> are mandatory per Gaia-X Trust Framework 24.04.</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Upload -->
+  <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+    <input type="file" id="fileInput" accept=".json,.yaml,.yml" />
+    <div class="icon">&#128194;</div>
+    <h3>Upload your OpenAPI specification</h3>
+    <p>JSON or YAML &mdash; OpenAPI 3.x</p>
+    <span class="file-btn">Select file</span>
+    <div class="upload-status" id="uploadStatus"></div>
+  </div>
+
+  <div class="summary-panel" id="summaryPanel">
+    <h4>Extracted from OpenAPI</h4>
+    <div id="summaryRows"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 — LegalParticipant VC                        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section open" data-section="1">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">1</span> Provider Identity <span class="section-tag tag-participant">participant.json</span></h2>
+      <span class="section-toggle">&#9662;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-info">Generates <strong>participant.json</strong> &mdash; the LegalParticipant Verifiable Credential. Identifies who is publishing in the Gaia-X ecosystem. The <code>issuer</code> field of this VC must be a Gaia-X Compliance Service DID in production (<code>did:web:compliance.gaia-x.eu</code>).</div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_issuer">Provider DID</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+        <input type="text" id="f_issuer" placeholder="did:web:mycompany.com" />
+        <div class="field-desc">DID of the provider. Becomes <code>id</code> of the LegalParticipant VC and <code>issuer</code> of all other VCs. In production must be resolvable via DID:web resolution.</div>
+        <div class="field-hint"><code>did:web:yourdomain.com</code></div>
+        <div class="field-error" id="err_issuer">Must follow format <code>did:web:domain.com</code></div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_legalName">Legal Organization Name</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+          <input type="text" id="f_legalName" placeholder="My Company GmbH" />
+          <div class="field-desc">Official registered legal name &rarr; <code>gx:legalName</code>.</div>
+          <div class="field-error" id="err_legalName">Required</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_country">Country Code (ISO 3166)</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+          <input type="text" id="f_country" placeholder="DE" maxlength="2" style="text-transform:uppercase" />
+          <div class="field-desc">2-letter country code &rarr; <code>gx:headquarterAddress.gx:addressCountryCode</code>.</div>
+          <div class="field-hint"><code>ES</code> &middot; <code>DE</code> &middot; <code>FR</code> &middot; <code>IT</code></div>
+          <div class="field-error" id="err_country">Enter 2-letter ISO country code</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_vatId">VAT ID</label><span class="badge badge-req">Required &middot; Gaia-X*</span></div>
+          <input type="text" id="f_vatId" placeholder="ESB12345678" />
+          <div class="field-desc">* At least one of VAT ID, LEI Code or EORI is required. &rarr; <code>gx:legalRegistrationNumber.gx:vatID</code>.</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_leiCode">LEI Code</label><span class="badge badge-opt">Optional*</span></div>
+          <input type="text" id="f_leiCode" placeholder="5299008W758S513GKV42" />
+          <div class="field-desc">Legal Entity Identifier (20-char) &rarr; <code>gx:legalRegistrationNumber.gx:leiCode</code>.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_copyrightOwner">Copyright Owner</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+        <input type="text" id="f_copyrightOwner" placeholder="My Company GmbH" />
+        <div class="field-desc"><strong>Mandatory per Trust Framework.</strong> Copyright holder of the software/API &rarr; <code>gx:copyrightOwner</code> in SoftwareResource VC.</div>
+        <div class="field-error" id="err_copyrightOwner">Required by Gaia-X Trust Framework</div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_serviceBaseUrl">Service Base URL</label><span class="badge badge-req">Required</span></div>
+        <input type="url" id="f_serviceBaseUrl" placeholder="https://api.mycompany.com" />
+        <div class="field-desc">Absolute URL where the API is deployed. Used to build EDC Asset <code>dataAddress.baseUrl</code>. If <code>servers[0].url</code> is relative (e.g. <code>/api/v3</code>), the full host is required here.</div>
+        <div class="field-hint"><code>https://</code> required</div>
+        <div class="field-error" id="err_serviceBaseUrl">Enter a valid https:// URL</div>
+      </div>
+
+      <!-- OPTIONAL: participant details -->
+      <details class="optional-toggle">
+        <summary>Optional participant fields</summary>
+        <div class="optional-body">
+          <div class="alert alert-info">These fields enrich the LegalParticipant VC. Optional per Gaia-X Trust Framework but recommended for full compliance verification.</div>
+
+          <div class="field">
+            <div class="field-header"><label for="f_orgName">Organization Short Name</label><span class="badge badge-opt">Optional</span></div>
+            <input type="text" id="f_orgName" placeholder="PetHub" />
+            <div class="field-desc">Commercial or short name &rarr; <code>gx:name</code>.</div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_street">Street Address</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_street" placeholder="Mainzer Landstra&szlig;e 100" />
+              <div class="field-desc">&rarr; <code>gx:headquarterAddress.gx:streetAddress</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_postalCode">Postal Code</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_postalCode" placeholder="60327" />
+              <div class="field-desc">&rarr; <code>gx:headquarterAddress.gx:postalCode</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_city">City</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_city" placeholder="Frankfurt am Main" />
+              <div class="field-desc">&rarr; <code>gx:headquarterAddress.gx:locality</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_regionCode">Region Code</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_regionCode" placeholder="DE-HE" />
+              <div class="field-desc">ISO 3166-2 region &rarr; <code>gx:headquarterAddress.gx:addressCode</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_parentOrg">Parent Organization DID</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_parentOrg" placeholder="did:web:global-federation.org" />
+              <div class="field-desc">&rarr; <code>gx:parentOrganization</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_eoriCode">EORI Code</label><span class="badge badge-opt">Optional*</span></div>
+              <input type="text" id="f_eoriCode" placeholder="DE1234567890123" />
+              <div class="field-desc">EU customs registration &rarr; <code>gx:legalRegistrationNumber.gx:EORI</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_complianceLabel">Gaia-X Compliance Level</label><span class="badge badge-opt">Optional</span></div>
+              <select id="f_complianceLabel">
+                <option value="">Not certified</option>
+                <option value="Gaia-X Level 1">Level 1 &mdash; Self-declared</option>
+                <option value="Gaia-X Level 2">Level 2 &mdash; Third-party audited</option>
+                <option value="Gaia-X Level 3">Level 3 &mdash; EU certification scheme</option>
+              </select>
+              <div class="field-desc">&rarr; <code>gx:compliance.gx:complianceLabel</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_trustFrameworkVersion">Trust Framework Version</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_trustFrameworkVersion" placeholder="24.04" value="24.04" />
+              <div class="field-desc">&rarr; <code>gx:compliance.gx:trustFrameworkVersion</code></div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 — SoftwareResource VC                        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section open" data-section="2">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">2</span> API / Software Metadata <span class="section-tag tag-software">softwareresource.json</span></h2>
+      <span class="section-toggle">&#9662;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-info">Generates <strong>softwareresource.json</strong> &mdash; the SoftwareResource VC that describes the API as a software artifact in the Gaia-X catalog. Fields marked <span class="badge badge-auto">auto</span> are extracted from the OpenAPI spec.</div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_name">API Name</label><span class="badge badge-req">Required</span><span class="badge badge-auto">auto</span></div>
+          <input type="text" id="f_name" data-source="info.title" placeholder="My API" />
+          <div class="field-desc">&rarr; <code>gx:name</code> &middot; <code>info.title</code></div>
+          <div class="field-error" id="err_name">Required</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_version">Version</label><span class="badge badge-req">Required</span><span class="badge badge-auto">auto</span></div>
+          <input type="text" id="f_version" data-source="info.version" placeholder="1.0.0" />
+          <div class="field-desc">&rarr; <code>gx:version</code> &middot; <code>info.version</code></div>
+          <div class="field-error" id="err_version">Required</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_description">Description</label><span class="badge badge-opt">Optional</span><span class="badge badge-auto">auto</span></div>
+        <textarea id="f_description" data-source="info.description" placeholder="Describe the API..."></textarea>
+        <div class="field-desc">&rarr; <code>gx:description</code> &middot; <code>info.description</code></div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_license">License (SPDX URI)</label><span class="badge badge-req">Required &middot; Gaia-X</span><span class="badge badge-auto">auto</span></div>
+        <input type="text" id="f_license" data-source="info.license.url" placeholder="https://spdx.org/licenses/Apache-2.0.html" />
+        <div class="field-desc"><strong>Mandatory per Trust Framework.</strong> Auto-converted from <code>info.license.url</code> to SPDX format &rarr; <code>gx:license[0]</code>.</div>
+        <div class="field-hint"><code>https://spdx.org/licenses/Apache-2.0.html</code> &middot; <code>https://spdx.org/licenses/MIT.html</code></div>
+        <div class="field-error" id="err_license">Required &mdash; use SPDX URI</div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_openApiBasePath">OpenAPI Base Path</label><span class="badge badge-auto">auto &middot; read-only</span></div>
+        <input type="text" id="f_openApiBasePath" data-source="servers.0.url" placeholder="/api/v3" readonly style="background:#f6f8fa;color:var(--muted)" />
+        <div class="field-desc">Extracted from <code>servers[0].url</code> &rarr; <code>gx:technicalInterface.gx:endpoint</code>. Combined with Service Base URL to build EDC <code>dataAddress.baseUrl</code>.</div>
+      </div>
+
+      <!-- OPTIONAL: software details -->
+      <details class="optional-toggle">
+        <summary>Optional software fields</summary>
+        <div class="optional-body">
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_contactEmail">Contact Email</label><span class="badge badge-opt">Optional</span><span class="badge badge-auto">auto</span></div>
+              <input type="email" id="f_contactEmail" data-source="info.contact.email" placeholder="api@mycompany.com" />
+              <div class="field-desc">&rarr; <code>info.contact.email</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_contactUrl">Contact URL</label><span class="badge badge-opt">Optional</span><span class="badge badge-auto">auto</span></div>
+              <input type="url" id="f_contactUrl" data-source="info.contact.url" placeholder="https://mycompany.com/support" />
+              <div class="field-desc">&rarr; <code>info.contact.url</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_softwareRef">Repository URL</label><span class="badge badge-opt">Optional</span></div>
+              <input type="url" id="f_softwareRef" placeholder="https://github.com/myorg/my-api" />
+              <div class="field-desc">Link to source code &rarr; <code>gx:softwareReference</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_progLang">Programming Language</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_progLang" placeholder="Python 3.11" />
+              <div class="field-desc">&rarr; <code>gx:programmingLanguage</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_checksum">Checksum</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_checksum" placeholder="sha256:abc123..." />
+              <div class="field-desc">Integrity hash of deployed artifact &rarr; <code>gx:checksum</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_resourceFormat">Format / MIME Type</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_resourceFormat" value="application/json" placeholder="application/json" />
+              <div class="field-desc">&rarr; <code>gx:format</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_negotiationLink">Negotiation Link</label><span class="badge badge-opt">Optional</span></div>
+              <input type="url" id="f_negotiationLink" placeholder="https://mycompany.com/negotiate/api" />
+              <div class="field-desc">URL to negotiate contract &rarr; <code>gx:contract.negotiationLink</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_slaUrl">SLA URL</label><span class="badge badge-opt">Optional</span></div>
+              <input type="url" id="f_slaUrl" placeholder="https://mycompany.com/legal/sla" />
+              <div class="field-desc">Service Level Agreement document &rarr; <code>gx:contract.sla</code>.</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-header"><label>Software Policies</label><span class="badge badge-opt">Optional</span></div>
+            <div class="field-desc" style="margin-bottom:8px">Plain-text policy statements (permissions, prohibitions, obligations) &rarr; <code>gx:policy[]</code> in SoftwareResource.</div>
+            <div class="dynamic-list" id="swPoliciesList"></div>
+            <button class="add-item-btn" onclick="addSwPolicy()">+ Add policy statement</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 3 — VC Identity (all VCs)                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="3">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">3</span> Verifiable Credential Identity <span class="section-tag tag-software">All VCs</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-info">These URIs are the unique identifiers of each VC. In production they must be dereferenceable &mdash; the URL should return the VC JSON-LD document. Suggestions are auto-generated from Provider DID + API name.</div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_vcId">SoftwareResource VC ID</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+        <input type="url" id="f_vcId" placeholder="https://mycompany.com/vcs/software/my-api" />
+        <div class="field-desc">Root <code>id</code> of the SoftwareResource VC.</div>
+        <div class="field-error" id="err_vcId">Required</div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_credentialSubjectId">Credential Subject ID</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+        <input type="url" id="f_credentialSubjectId" placeholder="https://mycompany.com/resources/my-api" />
+        <div class="field-desc"><code>credentialSubject.id</code> &mdash; URI of the described resource. Should differ from the VC ID.</div>
+        <div class="field-error" id="err_credentialSubjectId">Required</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_issuanceDate">Issuance Date</label><span class="badge badge-req">Required</span><span class="badge badge-auto">auto</span></div>
+          <input type="datetime-local" id="f_issuanceDate" />
+          <div class="field-desc">&rarr; <code>issuanceDate</code> in all VCs. Auto-set to now.</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_validUntil">Valid Until</label><span class="badge badge-opt">Optional</span></div>
+          <input type="datetime-local" id="f_validUntil" />
+          <div class="field-desc">&rarr; <code>expirationDate</code>. If empty, VC does not expire.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 4 — Policy VC + ODRL                           -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="4">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">4</span> Usage Policy (ODRL) <span class="section-tag tag-policy">policy.json + EDC Policy</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-warn">Defines the <strong>Access Policy</strong> (who can see the API in the catalog) and the <strong>Contract Policy</strong> (what rights the consumer gets). Used both for the Gaia-X Policy VC (Strapi portal) and the EDC Policy (contract negotiation).</div>
+
+      <!-- MODE SELECTOR -->
+      <div class="field">
+        <div class="field-header"><label>Policy Mode</label><span class="badge badge-req">Required</span></div>
+        <div id="policyModeTabs" style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:4px">
+          <button type="button" class="policy-tab active" onclick="setPolicyMode('preset')" id="tab_preset" style="flex:1;padding:10px 8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:var(--primary);color:white;transition:all .15s">
+            Use a pre-built policy
+          </button>
+          <button type="button" class="policy-tab" onclick="setPolicyMode('clone')" id="tab_clone" style="flex:1;padding:10px 8px;border:none;border-left:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;background:var(--card);color:var(--muted);transition:all .15s">
+            Clone &amp; customize
+          </button>
+          <button type="button" class="policy-tab" onclick="setPolicyMode('custom')" id="tab_custom" style="flex:1;padding:10px 8px;border:none;border-left:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;background:var(--card);color:var(--muted);transition:all .15s">
+            Build from scratch
+          </button>
+        </div>
+      </div>
+
+      <!-- MODE: PRESET -->
+      <div id="policyMode_preset">
+        <div class="alert alert-success" style="margin-top:12px">Select a pre-built policy from the library. These are standard policies already published (or to be published) in the EDC connector. The pipeline will reference them by <code>@id</code> without creating a new one.</div>
+
+        <div class="field">
+          <div class="field-header"><label for="f_presetPolicy">Access Policy</label><span class="badge badge-req">Required</span></div>
+          <select id="f_presetPolicy" onchange="onPresetChange()">
+            <option value="policy-open"          data-desc="No restrictions. Any data consumer can discover and negotiate access." data-action="use" data-constraints="none" data-prohibitions="">Open Access</option>
+            <option value="policy-gaiax-l1"      data-desc="Only consumers with a valid Gaia-X Level 1 (self-declared) compliance credential." data-action="use" data-constraints="gaiax-l1" data-prohibitions="">Gaia-X Level 1 participants only</option>
+            <option value="policy-gaiax-l2"      data-desc="Only consumers audited by a Gaia-X Conformity Assessment Body (Level 2)." data-action="use" data-constraints="gaiax-l2" data-prohibitions="">Gaia-X Level 2 participants only</option>
+            <option value="policy-eu-only"        data-desc="Consumer must be registered within the EU/EEA. Enforces data sovereignty." data-action="use" data-constraints="eu-only" data-prohibitions="">EU/EEA location required</option>
+            <option value="policy-gaiax-l1-eu"    data-desc="Combines Gaia-X Level 1 membership AND EU/EEA location requirement." data-action="use" data-constraints="gaiax-l1,eu-only" data-prohibitions="">Gaia-X L1 + EU location</option>
+            <option value="policy-no-distribute"   data-desc="Allows use but explicitly prohibits redistribution of data to third parties." data-action="use" data-constraints="none" data-prohibitions="distribute">Use allowed, no redistribution</option>
+            <option value="policy-research-only"   data-desc="Access limited to research purposes only. Consumer must declare purpose." data-action="use" data-constraints="purpose" data-prohibitions="distribute,derive">Research purposes only</option>
+          </select>
+        </div>
+
+        <div id="presetDescription" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:12px;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <strong style="font-size:12px" id="presetId">policy-open</strong>
+            <span class="badge badge-gx" id="presetAction">odrl:use</span>
+          </div>
+          <p id="presetDescText" style="color:var(--muted);margin-bottom:10px">No restrictions. Any data consumer can discover and negotiate access.</p>
+          <div style="font-size:11px;color:var(--muted)">
+            <span>Constraints: </span><span id="presetConstraints" style="font-weight:500">none</span>
+            <span style="margin-left:12px">Prohibitions: </span><span id="presetProhibitions" style="font-weight:500">none</span>
+          </div>
+          <details style="margin-top:10px">
+            <summary style="font-size:11px;color:var(--primary);cursor:pointer;list-style:none">View ODRL JSON-LD</summary>
+            <pre id="presetOdrlPreview" style="margin-top:6px;font-size:10px;background:white;border:1px solid var(--border);border-radius:var(--radius);padding:10px;overflow:auto;max-height:200px"></pre>
+          </details>
+        </div>
+
+        <div class="field" style="margin-top:14px">
+          <div class="field-header"><label for="f_presetContractPolicy">Contract Policy</label><span class="badge badge-opt">Optional</span></div>
+          <select id="f_presetContractPolicy">
+            <option value="same">Same as Access Policy</option>
+            <option value="policy-open">policy-open (Open Access)</option>
+            <option value="policy-gaiax-l1">policy-gaiax-l1 (Level 1)</option>
+            <option value="policy-gaiax-l2">policy-gaiax-l2 (Level 2)</option>
+            <option value="policy-eu-only">policy-eu-only (EU only)</option>
+            <option value="policy-gaiax-l1-eu">policy-gaiax-l1-eu (L1 + EU)</option>
+            <option value="policy-no-distribute">policy-no-distribute (No redistribution)</option>
+            <option value="policy-research-only">policy-research-only (Research only)</option>
+          </select>
+          <div class="field-desc">In EDC, the access policy controls <strong>who can see</strong> the asset in the catalog, while the contract policy controls <strong>what the consumer agrees to</strong> during negotiation. Often they are the same, but can differ (e.g., anyone can see it but only EU consumers can negotiate).</div>
+        </div>
+      </div>
+
+      <!-- MODE: CLONE -->
+      <div id="policyMode_clone" style="display:none">
+        <div class="alert alert-info" style="margin-top:12px">Start from a pre-built policy and customize it. This creates a <strong>new policy</strong> in the EDC connector with your modifications. The original is not affected.</div>
+
+        <div class="field">
+          <div class="field-header"><label for="f_cloneBase">Base Policy (to clone from)</label><span class="badge badge-req">Required</span></div>
+          <select id="f_cloneBase" onchange="onCloneBaseChange()">
+            <option value="policy-open">policy-open &mdash; Open Access</option>
+            <option value="policy-gaiax-l1">policy-gaiax-l1 &mdash; Level 1</option>
+            <option value="policy-gaiax-l2">policy-gaiax-l2 &mdash; Level 2</option>
+            <option value="policy-eu-only">policy-eu-only &mdash; EU only</option>
+            <option value="policy-gaiax-l1-eu">policy-gaiax-l1-eu &mdash; L1 + EU</option>
+            <option value="policy-no-distribute">policy-no-distribute &mdash; No redistribution</option>
+            <option value="policy-research-only">policy-research-only &mdash; Research only</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="field-header"><label for="f_clonePolicyId">New Policy ID</label><span class="badge badge-req">Required</span></div>
+          <input type="text" id="f_clonePolicyId" placeholder="policy-my-custom-v1" />
+          <div class="field-desc">Unique ID for the new policy. Will be created in the EDC connector.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-header"><label for="f_clonePolicyName">Policy Name</label><span class="badge badge-req">Required</span></div>
+          <input type="text" id="f_clonePolicyName" placeholder="My Custom API Policy" />
+          <div class="field-desc">&rarr; <code>gx:policyName</code> in the Gaia-X Policy VC.</div>
+          <div class="field-error" id="err_policyName">Required</div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <div class="field-header"><label for="f_cloneAction">ODRL Action</label></div>
+            <select id="f_cloneAction">
+              <option value="USE">odrl:use &mdash; Allow consumption</option>
+              <option value="REPRODUCE">odrl:reproduce &mdash; Allow reproduction</option>
+              <option value="DISTRIBUTE">odrl:distribute &mdash; Allow redistribution</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-header"><label for="f_cloneAccessLevel">Access Level</label></div>
+            <select id="f_cloneAccessLevel">
+              <option value="none">Open &mdash; any requester</option>
+              <option value="gaiax-l1">Gaia-X Level 1 participant only</option>
+              <option value="gaiax-l2">Gaia-X Level 2 participant only</option>
+              <option value="eu-only">EU/EEA location required</option>
+              <option value="purpose">Purpose-limited</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <div class="field-header"><label for="f_cloneValidUntil">Permission Valid Until</label><span class="badge badge-opt">Optional</span></div>
+            <input type="date" id="f_cloneValidUntil" />
+            <div class="field-desc">Temporal ODRL constraint.</div>
+          </div>
+          <div class="field">
+            <div class="field-header"><label for="f_clonePurpose">Purpose Constraint</label><span class="badge badge-opt">Optional</span></div>
+            <input type="text" id="f_clonePurpose" placeholder="licensed-research" />
+            <div class="field-desc">Restrict usage to a declared purpose.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-header"><label>ODRL Prohibitions</label><span class="badge badge-opt">Optional</span></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" id="cproh_distribute"> odrl:distribute</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" id="cproh_derive"> odrl:derive</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" id="cproh_share"> odrl:share</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" id="cproh_export"> odrl:export</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" id="cproh_modify"> odrl:modify</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE: CUSTOM (from scratch) -->
+      <div id="policyMode_custom" style="display:none">
+        <div class="alert alert-info" style="margin-top:12px">Build an ODRL policy entirely from scratch. You write the full JSON-LD. This creates a new policy in the EDC connector. For the Gaia-X Policy VC, the <code>gx:usagePolicy</code> will contain whatever you define here.</div>
+
+        <div class="field">
+          <div class="field-header"><label for="f_customPolicyId">Policy ID</label><span class="badge badge-req">Required</span></div>
+          <input type="text" id="f_customPolicyId" placeholder="policy-my-advanced-v1" />
+          <div class="field-desc">Unique ID for this policy in the EDC connector.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-header"><label for="f_customPolicyName">Policy Name</label><span class="badge badge-req">Required</span></div>
+          <input type="text" id="f_customPolicyName" placeholder="My Advanced ODRL Policy" />
+          <div class="field-desc">&rarr; <code>gx:policyName</code> in the Gaia-X Policy VC.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-header"><label for="f_customOdrl">Full ODRL Policy (JSON-LD)</label><span class="badge badge-req">Required</span></div>
+          <textarea id="f_customOdrl" style="min-height:220px;font-size:11px" placeholder='{
+  "@type": "odrl:Set",
+  "odrl:permission": [{
+    "odrl:action": "odrl:use",
+    "odrl:constraint": [{
+      "odrl:leftOperand": "odrl:purpose",
+      "odrl:operator": "odrl:eq",
+      "odrl:rightOperand": "licensed-veterinary-research"
+    }]
+  }],
+  "odrl:prohibition": [{
+    "odrl:action": "odrl:distribute"
+  }]
+}'></textarea>
+          <div class="field-desc">Complete ODRL policy body. Must be valid JSON. This gets wrapped in the EDC <code>policy</code> field and in the Gaia-X <code>gx:usagePolicy</code>.<br>Reference: <a href="https://www.w3.org/TR/odrl-model/" target="_blank" style="color:var(--primary)">ODRL Model spec</a> &middot; <a href="https://www.w3.org/TR/odrl-vocab/" target="_blank" style="color:var(--primary)">ODRL Vocabulary</a></div>
+        </div>
+      </div>
+
+      <!-- LEGAL FRAMEWORK — shared across all modes -->
+      <details class="optional-toggle" style="margin-top:18px">
+        <summary>Optional legal framework fields</summary>
+        <div class="optional-body">
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_governingLaw">Governing Law</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_governingLaw" placeholder="DE" maxlength="2" />
+              <div class="field-desc">ISO country code of governing jurisdiction &rarr; <code>gx:contractDefinitions.gx:governingLaw</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_arbitration">Arbitration Body</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_arbitration" placeholder="International Chamber of Commerce (ICC)" />
+              <div class="field-desc">&rarr; <code>gx:contractDefinitions.gx:arbitration</code>.</div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_legalTemplate">Legal Template URL</label><span class="badge badge-opt">Optional</span></div>
+              <input type="url" id="f_legalTemplate" placeholder="https://mycompany.com/legal/msa-v2" />
+              <div class="field-desc">Master Service Agreement URL &rarr; <code>gx:contractDefinitions.gx:legalTemplate</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_termsHash">T&amp;C Document Hash</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_termsHash" placeholder="v1-legal-hash-sha256" />
+              <div class="field-desc">Hash of T&amp;C document &rarr; <code>gx:termsAndConditions.gx:hash</code> in ServiceOffering.</div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 5 — ServiceOffering VC                         -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="5">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">5</span> Service Offering <span class="section-tag tag-service">serviceoffering.json</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-info">Generates <strong>serviceoffering.json</strong> &mdash; the ServiceOffering VC that groups SoftwareResource + DataResource + InfrastructureResource under a single commercial offer. <code>gx:termsAndConditions</code> is required if this VC is generated.</div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_serviceOfferingId">ServiceOffering VC ID</label><span class="badge badge-req">Required if used</span></div>
+        <input type="url" id="f_serviceOfferingId" placeholder="https://mycompany.com/vcs/service/my-service" />
+        <div class="field-desc">Root <code>id</code> of the ServiceOffering VC. References this offering from DataResource and SoftwareResource VCs via <code>gx:aggregationOf</code>.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_termsUrl">Terms &amp; Conditions URL</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+        <input type="url" id="f_termsUrl" data-source="info.termsOfService" placeholder="https://mycompany.com/legal/terms" />
+        <div class="field-desc"><strong>Mandatory for ServiceOffering.</strong> Auto-filled from <code>info.termsOfService</code> &rarr; <code>gx:termsAndConditions[0].gx:URL</code>.</div>
+        <div class="field-hint">Without this field the ServiceOffering VC is invalid per Gaia-X Trust Framework.</div>
+      </div>
+
+      <!-- OPTIONAL: service offering details -->
+      <details class="optional-toggle">
+        <summary>Optional service offering fields</summary>
+        <div class="optional-body">
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_serviceDataLocation">Data Location</label><span class="badge badge-opt">Optional</span></div>
+              <select id="f_serviceDataLocation">
+                <option value="">Not specified</option>
+                <option value="EU">EU &mdash; European Union</option>
+                <option value="EEA">EEA &mdash; European Economic Area</option>
+                <option value="EU+EEA">EU + EEA</option>
+                <option value="DE">DE &mdash; Germany only</option>
+              </select>
+              <div class="field-desc">&rarr; <code>gx:dataSovereignty.gx:dataLocation</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_isSovereign">Data Sovereignty</label><span class="badge badge-opt">Optional</span></div>
+              <select id="f_isSovereign">
+                <option value="">Not specified</option>
+                <option value="true">Yes &mdash; sovereign data exchange</option>
+                <option value="false">No</option>
+              </select>
+              <div class="field-desc">&rarr; <code>gx:dataSovereignty.gx:isSovereign</code>.</div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_serviceComplianceLevel">Compliance Level</label><span class="badge badge-opt">Optional</span></div>
+              <select id="f_serviceComplianceLevel">
+                <option value="">Not specified</option>
+                <option value="Level 1">Level 1 &mdash; Self-declared</option>
+                <option value="Level 2">Level 2 &mdash; Third-party audited</option>
+                <option value="Level 3">Level 3 &mdash; EU certification</option>
+              </select>
+              <div class="field-desc">&rarr; <code>gx:complianceLabel.gx:level</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_serviceDesc">Service Description</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_serviceDesc" placeholder="A complete sovereign API solution..." />
+              <div class="field-desc">&rarr; <code>gx:description</code> in ServiceOffering.</div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 6 — DataResource VC                            -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="6">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">6</span> Data Resource <span class="section-tag tag-data">dataresource.json</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-info">Generates <strong>dataresource.json</strong> &mdash; the DataResource VC describing the actual dataset exposed by the API. <code>gx:containsPII</code> is required per Trust Framework if this VC is generated.</div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_dataResourceId">DataResource VC ID</label><span class="badge badge-req">Required if used</span></div>
+        <input type="url" id="f_dataResourceId" placeholder="https://mycompany.com/vcs/data/my-dataset" />
+        <div class="field-desc">Root <code>id</code> of the DataResource VC. Referenced from ServiceOffering via <code>gx:aggregationOf</code>.</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_dataName">Dataset Name</label><span class="badge badge-req">Required if used</span></div>
+          <input type="text" id="f_dataName" placeholder="National Pet Health Registry" />
+          <div class="field-desc">&rarr; <code>gx:name</code> in DataResource VC.</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_containsPersonalData">Contains PII / Personal Data</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+          <select id="f_containsPersonalData">
+            <option value="">Select...</option>
+            <option value="false">No &mdash; no personal data (GDPR N/A)</option>
+            <option value="true">Yes &mdash; contains PII (GDPR applies)</option>
+          </select>
+          <div class="field-desc">Mandatory if DataResource is declared &rarr; <code>gx:containsPII</code>.</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_dataCopyrightOwner">Data Copyright Owner</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+          <input type="text" id="f_dataCopyrightOwner" placeholder="My Company GmbH" />
+          <div class="field-desc">Copyright owner of the dataset (may differ from API owner) &rarr; <code>gx:copyrightOwner</code> in DataResource.</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_dataLicense">Data License (SPDX)</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+          <input type="text" id="f_dataLicense" placeholder="https://spdx.org/licenses/CC-BY-4.0.html" />
+          <div class="field-desc">License for the data (may differ from software license) &rarr; <code>gx:license[0]</code> in DataResource.</div>
+        </div>
+      </div>
+
+      <!-- OPTIONAL: data resource details -->
+      <details class="optional-toggle">
+        <summary>Optional data resource fields</summary>
+        <div class="optional-body">
+          <div class="field">
+            <div class="field-header"><label for="f_dataDescription">Dataset Description</label><span class="badge badge-opt">Optional</span></div>
+            <textarea id="f_dataDescription" placeholder="Anonymized dataset containing..."></textarea>
+            <div class="field-desc">&rarr; <code>gx:description</code> in DataResource.</div>
+          </div>
+
+          <div class="field">
+            <div class="field-header"><label for="f_dataAccountability">Data Accountability</label><span class="badge badge-opt">Optional</span></div>
+            <input type="text" id="f_dataAccountability" placeholder="Data is updated monthly from verified sources." />
+            <div class="field-desc">Statement about how data is maintained &rarr; <code>gx:dataAccountability</code>.</div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_processingBasis">GDPR Processing Basis</label><span class="badge badge-opt">Optional</span></div>
+              <select id="f_processingBasis">
+                <option value="">Not specified</option>
+                <option value="consent">Consent</option>
+                <option value="contract">Contract</option>
+                <option value="legal-obligation">Legal obligation</option>
+                <option value="vital-interests">Vital interests</option>
+                <option value="public-task">Public task</option>
+                <option value="legitimate-interests">Legitimate interests</option>
+                <option value="research">Research</option>
+              </select>
+              <div class="field-desc">GDPR Art. 6 basis for processing &rarr; <code>gx:privacy.gx:processingBasis</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_anonymization">Anonymization Method</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_anonymization" placeholder="k-anonymity/min-5" />
+              <div class="field-desc">&rarr; <code>gx:privacy.gx:anonymization</code>.</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-header"><label for="f_exposedAttributes">Exposed Attributes (JSON)</label><span class="badge badge-opt">Optional</span></div>
+            <textarea id="f_exposedAttributes" style="min-height:90px" placeholder='{"id": "Unique identifier", "name": "Pet name", "species": "Type of animal"}'></textarea>
+            <div class="field-desc">Schema of attributes exposed via this API &rarr; <code>gx:exposedAttributes</code>. JSON object where keys are field names and values are descriptions.</div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 7 — InfrastructureResource VC                  -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="7">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">7</span> Infrastructure Resource <span class="section-tag tag-infra">InfrastructureResource.json</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-info">Generates <strong>InfrastructureResource.json</strong> &mdash; the VC describing the physical/virtual infrastructure hosting the API (server, database, cloud node). Referenced from ServiceOffering via <code>gx:aggregationOf</code>.</div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_infraId">InfrastructureResource VC ID</label><span class="badge badge-req">Required if used</span></div>
+        <input type="url" id="f_infraId" placeholder="https://mycompany.com/vcs/infra/api-server-01" />
+        <div class="field-desc">Root <code>id</code> of the InfrastructureResource VC.</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_infraName">Infrastructure Name</label><span class="badge badge-req">Required if used</span></div>
+          <input type="text" id="f_infraName" placeholder="API Server EU-01" />
+          <div class="field-desc">&rarr; <code>gx:name</code></div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_infraCopyrightOwner">Infra Copyright Owner</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+          <input type="text" id="f_infraCopyrightOwner" placeholder="Infrastructure Provider Corp" />
+          <div class="field-desc">Mandatory per Trust Framework &rarr; <code>gx:copyrightOwner</code> in InfrastructureResource.</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_infraLicense">Infra License (SPDX)</label><span class="badge badge-req">Required &middot; Gaia-X</span></div>
+          <input type="text" id="f_infraLicense" placeholder="https://spdx.org/licenses/Apache-2.0.html" />
+          <div class="field-desc">License of the infrastructure software &rarr; <code>gx:license[0]</code> in InfrastructureResource.</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_infraServiceType">Service Type</label><span class="badge badge-opt">Optional</span></div>
+          <select id="f_infraServiceType">
+            <option value="">Select type...</option>
+            <option value="Virtual Machine">Virtual Machine (IaaS)</option>
+            <option value="Container">Container (CaaS)</option>
+            <option value="Database-as-a-Service (DBaaS)">Database-as-a-Service (DBaaS)</option>
+            <option value="Kubernetes Cluster">Kubernetes Cluster</option>
+            <option value="Serverless Function">Serverless Function (FaaS)</option>
+            <option value="Object Storage">Object Storage</option>
+            <option value="Bare Metal">Bare Metal</option>
+          </select>
+          <div class="field-desc">&rarr; <code>gx:nodeInfo.gx:serviceType</code></div>
+        </div>
+      </div>
+
+      <!-- OPTIONAL: infra details -->
+      <details class="optional-toggle">
+        <summary>Optional infrastructure fields</summary>
+        <div class="optional-body">
+          <div class="field">
+            <div class="field-header"><label for="f_infraDesc">Infrastructure Description</label><span class="badge badge-opt">Optional</span></div>
+            <textarea id="f_infraDesc" placeholder="Virtual server hosting the API in EU-West region..."></textarea>
+            <div class="field-desc">&rarr; <code>gx:description</code></div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_infraLocation">Location</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_infraLocation" placeholder="EU-Germany-Frankfurt-1" />
+              <div class="field-desc">Physical or cloud zone &rarr; <code>gx:nodeInfo.gx:location</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_infraResourceType">Resource Type</label><span class="badge badge-opt">Optional</span></div>
+              <select id="f_infraResourceType">
+                <option value="">Not specified</option>
+                <option value="Virtual">Virtual</option>
+                <option value="Physical">Physical / Bare Metal</option>
+                <option value="Hybrid">Hybrid</option>
+              </select>
+              <div class="field-desc">&rarr; <code>gx:nodeInfo.gx:resourceType</code></div>
+            </div>
+          </div>
+
+          <div class="field-row-3">
+            <div class="field">
+              <div class="field-header"><label for="f_cpuCores">CPU Cores</label><span class="badge badge-opt">Optional</span></div>
+              <input type="number" id="f_cpuCores" placeholder="4" min="1" />
+              <div class="field-desc">&rarr; <code>gx:technicalAttributes.gx:cpuCores</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_ramGb">RAM (GB)</label><span class="badge badge-opt">Optional</span></div>
+              <input type="number" id="f_ramGb" placeholder="16" min="1" />
+              <div class="field-desc">&rarr; <code>gx:technicalAttributes.gx:ramGb</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_storageType">Storage Type</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_storageType" placeholder="SSD / Encrypted-at-rest" />
+              <div class="field-desc">&rarr; <code>gx:technicalAttributes.gx:storageType</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_networkZone">Network Zone</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_networkZone" placeholder="Private-VPC-01" />
+              <div class="field-desc">&rarr; <code>gx:technicalAttributes.gx:networkZone</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_dbEngine">Database Engine</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_dbEngine" placeholder="PostgreSQL 15.4" />
+              <div class="field-desc">&rarr; <code>gx:nodeInfo.gx:databaseEngine</code> (only for DBaaS)</div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 8 — ContractDefinition Gaia-X VC               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="8">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">8</span> Contract &amp; SLA <span class="section-tag tag-contract">contract.json</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-warn">Generates <strong>contract.json</strong> &mdash; the Gaia-X ContractDefinition VC (legal metadata for the Strapi portal). This is <strong>different</strong> from the EDC ContractDefinition (Section 9). This one describes the legal terms, SLA and billing model of the service offering.</div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_contractName">Contract Name</label><span class="badge badge-req">Required if used</span></div>
+          <input type="text" id="f_contractName" placeholder="Contract Definition &ndash; My API (v1)" />
+          <div class="field-desc">&rarr; <code>gx:contractName</code></div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_contractId">Contract ID</label><span class="badge badge-req">Required if used</span></div>
+          <input type="text" id="f_contractId" placeholder="API-CONTRACT-2026-V1" />
+          <div class="field-desc">&rarr; <code>gx:contractId</code></div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_contractStatus">Status</label><span class="badge badge-opt">Optional</span></div>
+          <select id="f_contractStatus">
+            <option value="Active">Active</option>
+            <option value="Draft">Draft</option>
+            <option value="Expired">Expired</option>
+            <option value="Terminated">Terminated</option>
+          </select>
+          <div class="field-desc">&rarr; <code>gx:status</code></div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_offeringModel">Offering Model</label><span class="badge badge-opt">Optional</span></div>
+          <select id="f_offeringModel">
+            <option value="">Not specified</option>
+            <option value="SaaS - Pay-per-use">SaaS &mdash; Pay-per-use</option>
+            <option value="SaaS - Subscription">SaaS &mdash; Subscription</option>
+            <option value="Free - Open">Free &mdash; Open access</option>
+            <option value="Free - Research">Free &mdash; Research only</option>
+            <option value="PaaS - Tiered">PaaS &mdash; Tiered pricing</option>
+          </select>
+          <div class="field-desc">&rarr; <code>gx:offeringModel</code></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_consumerDid">Consumer DID</label><span class="badge badge-opt">Optional</span></div>
+        <input type="text" id="f_consumerDid" placeholder="did:web:consumer.example.org" />
+        <div class="field-desc">DID of the specific consumer this contract applies to. Leave empty for open/multi-consumer contracts &rarr; <code>gx:parties.gx:consumer</code>.</div>
+      </div>
+
+      <!-- OPTIONAL: SLA -->
+      <details class="optional-toggle">
+        <summary>Optional SLA / Service Levels</summary>
+        <div class="optional-body">
+          <div class="alert alert-info">These fields populate <code>gx:serviceLevels[]</code> in the ContractDefinition VC &mdash; the measurable quality commitments of the service.</div>
+
+          <div class="field-row-3">
+            <div class="field">
+              <div class="field-header"><label for="f_slaAvailability">Availability Target</label><span class="badge badge-opt">Optional</span></div>
+              <input type="number" id="f_slaAvailability" placeholder="0.999" min="0" max="1" step="0.001" />
+              <div class="field-desc">Ratio (0&ndash;1) &rarr; <code>gx:serviceLevels[availability].gx:targetValue</code>.</div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_slaLatency">Latency p95 (ms)</label><span class="badge badge-opt">Optional</span></div>
+              <input type="number" id="f_slaLatency" placeholder="500" min="1" />
+              <div class="field-desc">&rarr; <code>gx:serviceLevels[latency_p95]</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_slaRateLimit">Rate Limit (req/min)</label><span class="badge badge-opt">Optional</span></div>
+              <input type="number" id="f_slaRateLimit" placeholder="1000" min="1" />
+              <div class="field-desc">&rarr; <code>gx:serviceLevels[rate_limit]</code></div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <div class="field-header"><label for="f_slaWindow">SLA Measurement Window</label><span class="badge badge-opt">Optional</span></div>
+              <select id="f_slaWindow">
+                <option value="rolling-30d">Rolling 30 days</option>
+                <option value="rolling-7d">Rolling 7 days</option>
+                <option value="calendar-month">Calendar month</option>
+              </select>
+              <div class="field-desc">&rarr; <code>gx:measurementWindow</code></div>
+            </div>
+            <div class="field">
+              <div class="field-header"><label for="f_noticePeriod">Termination Notice Period</label><span class="badge badge-opt">Optional</span></div>
+              <input type="text" id="f_noticePeriod" placeholder="P30D" />
+              <div class="field-desc">ISO 8601 duration &rarr; <code>gx:termination.gx:noticePeriod</code>. Example: <code>P30D</code> = 30 days.</div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- OPTIONAL: Billing -->
+      <details class="optional-toggle">
+        <summary>Optional Billing Model</summary>
+        <div class="optional-body">
+          <div class="alert alert-info">Populates <code>gx:billing</code> in the ContractDefinition VC. Describes pricing tiers available to consumers.</div>
+
+          <div class="field">
+            <div class="field-header"><label for="f_billingModel">Billing Model</label><span class="badge badge-opt">Optional</span></div>
+            <select id="f_billingModel">
+              <option value="">Not specified</option>
+              <option value="free">Free</option>
+              <option value="flat">Flat rate</option>
+              <option value="tiered">Tiered</option>
+              <option value="usage-based">Usage-based</option>
+              <option value="freemium">Freemium</option>
+            </select>
+            <div class="field-desc">&rarr; <code>gx:billing.gx:model</code></div>
+          </div>
+
+          <div id="billingTiersList"></div>
+          <button class="add-item-btn" onclick="addBillingTier()">+ Add billing tier</button>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 9 — EDC Connector                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="9">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">9</span> EDC Connector <span class="section-tag tag-edc">contractdefinition.json (EDC)</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="alert alert-warn">Generates EDC Assets, EDC Policy and <strong>contractdefinition.json (EDC native)</strong> &mdash; the technical connector configuration. This is different from the Gaia-X ContractDefinition VC in Section 8.</div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_edcUrl">EDC Management API URL</label><span class="badge badge-req">Required</span></div>
+        <input type="url" id="f_edcUrl" placeholder="https://edc.mycompany.com/management/v3" />
+        <div class="field-desc">Full URL of EDC Management API v3. Assets, policies and contract definitions are created here by the pipeline.</div>
+        <div class="field-error" id="err_edcUrl">Enter a valid URL</div>
+      </div>
+
+      <div class="field">
+        <div class="field-header"><label for="f_edcApiKey">EDC API Key</label><span class="badge badge-req">Required</span></div>
+        <input type="password" id="f_edcApiKey" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+        <div class="field-desc">Authentication key &rarr; <code>X-Api-Key</code> header. Do not commit this file to the repository.</div>
+        <div class="field-error" id="err_edcApiKey">Required</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_assetPrefix">Asset ID Prefix</label><span class="badge badge-opt">Optional</span><span class="badge badge-auto">auto</span></div>
+          <input type="text" id="f_assetPrefix" placeholder="my-api-" />
+          <div class="field-desc">Prefix for EDC Asset IDs &rarr; <code>petstore-getPetById</code>, <code>petstore-addPet</code>.</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_contentType">Default Content-Type</label><span class="badge badge-opt">Optional</span></div>
+          <input type="text" id="f_contentType" value="application/json" />
+          <div class="field-desc">&rarr; EDC asset <code>properties.contenttype</code>.</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <div class="field-header"><label for="f_edcProtocol">Transfer Protocol</label><span class="badge badge-opt">Optional</span></div>
+          <select id="f_edcProtocol">
+            <option value="HttpData">HttpData &mdash; REST HTTP (most common)</option>
+            <option value="HttpProxy">HttpProxy &mdash; HTTP proxy</option>
+            <option value="AmazonS3">AmazonS3</option>
+            <option value="AzureStorage">AzureStorage</option>
+          </select>
+          <div class="field-desc">&rarr; EDC <code>dataAddress.type</code>.</div>
+        </div>
+        <div class="field">
+          <div class="field-header"><label for="f_authType">Backend Auth Type</label><span class="badge badge-opt">Optional</span></div>
+          <select id="f_authType">
+            <option value="none">None</option>
+            <option value="bearer">Bearer Token</option>
+            <option value="apikey">API Key (header)</option>
+            <option value="oauth2">OAuth2 Client Credentials</option>
+          </select>
+          <div class="field-desc">Authentication from EDC to your backend API.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 10 — Operations Preview                        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section" data-section="10">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h2><span class="section-num">10</span> Operations Preview <span class="section-tag tag-edc">EDC Assets</span></h2>
+      <span class="section-toggle">&#9656;</span>
+    </div>
+    <div class="section-body">
+      <div class="field-desc" style="margin-bottom:12px">Each operation becomes <strong>one EDC Asset</strong> and one entry in <code>gx:technicalInterface.gx:operations</code> of the SoftwareResource VC. Uncheck any operations to exclude them.</div>
+      <div id="operationsTable"><p style="color:var(--muted);font-size:13px">Upload an OpenAPI file to see operations.</p></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Sticky Footer -->
+<div class="sticky-footer">
+  <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+  <button class="btn btn-primary" onclick="validateAndPreview()">Preview JSON</button>
+  <button class="btn btn-success" onclick="downloadConfig()">&#11015; Download Config</button>
+</div>
+
+<!-- Preview Modal -->
+<div id="previewModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Generated Configuration</h3>
+      <button class="modal-close" onclick="document.getElementById('previewModal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <pre id="previewContent"></pre>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('previewModal').style.display='none'">Close</button>
+        <button class="btn btn-success" onclick="downloadConfig()">&#11015; Download</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- External libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+
+<!-- Application scripts (load order matters) -->
+<script src="js/policy-library.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/validation.js"></script>
+<script src="js/policy.js"></script>
+<script src="js/upload.js"></script>
+<script src="js/config-builder.js"></script>
+<script src="js/iframe-bridge.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

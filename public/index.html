@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <title>Gaia-X Dataspace Config</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsonld/8.3.2/jsonld.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container" style="position:relative">
+    <header>
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="Logo.svg" alt="Logo" class="logo" style="background:none;">
+        <div>
+          <h1 data-i18n="header_title">Configuraci&oacute;n Gaia-X EDC</h1>
+          <p data-i18n="header_sub">OpenDataSpace &mdash; Configura y despliega assets de API en Eclipse Dataspace Connector</p>
+        </div>
+      </div>
+      <div class="lang-toggle">
+        <button class="lang-btn" onclick="setLang('en')" id="langEn">EN</button>
+        <button class="lang-btn active" onclick="setLang('es')" id="langEs">ES</button>
+      </div>
+    </header>
+    <div class="steps">
+      <div class="step active" onclick="goStep(1)" id="step1"><span class="step-num">1</span><span data-i18n="step_openapi">OpenAPI</span></div>
+      <div class="step" onclick="goStep(2)" id="step2"><span class="step-num">2</span><span data-i18n="step_config">Configuraci&oacute;n</span></div>
+      <div class="step" onclick="goStep(3)" id="step3"><span class="step-num">3</span><span data-i18n="step_review">Revisar</span></div>
+      <div class="step" onclick="goStep(4)" id="step4"><span class="step-num">4</span><span data-i18n="step_deploy">Despliegue</span></div>
+    </div>
+    <div class="panel active" id="panel1">
+      <div class="card">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="upload_title" style="background:var(--primary)">C</div> <span data-i18n="upload_title">Cargar especificaci&oacute;n OpenAPI</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="upload" id="uploadArea" role="button" tabindex="0" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept=".yaml,.yml,.json" onchange="handleFile(this.files[0])">
+          <div class="icon"><i class="fa-solid fa-file-lines"></i></div>
+          <h3 data-i18n="upload_drop">Arrastra tu archivo OpenAPI aqu&iacute;</h3>
+          <p data-i18n="upload_formats">Soporta YAML y JSON (.yaml, .yml, .json)</p>
+        </div>
+        <div id="uploadStatus" class="alert alert-success" style="display:none"></div>
+        <div id="specSummary" style="display:none; margin-top:14px;">
+          <div class="field-row">
+            <div><strong style="font-size:12px;color:var(--muted)" data-i18n="lbl_title">T&iacute;tulo:</strong> <span id="specTitle"></span></div>
+            <div><strong style="font-size:12px;color:var(--muted)" data-i18n="lbl_version">Versi&oacute;n:</strong> <span id="specVersion"></span></div>
+          </div>
+          <div style="margin-top:4px"><strong style="font-size:12px;color:var(--muted)" data-i18n="lbl_operations">Operaciones:</strong> <span id="specOpsCount"></span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="history_title" style="background:#6f42c1">C</div> <span data-i18n="history_title">Cargar historial previo</span> <span style="font-size:11px;font-weight:400;color:var(--muted)" data-i18n="history_optional">(opcional)</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px" data-i18n="history_desc">Carga un JSON de resultado anterior para gestionar recursos existentes: actualizar, eliminar o a&ntilde;adir operaciones sin duplicar.</p>
+        <div class="upload" id="historyUploadArea" style="padding:18px" role="button" tabindex="0" onclick="document.getElementById('historyFileInput').click()">
+          <input type="file" id="historyFileInput" accept=".json" onchange="handleHistoryFile(this.files[0])">
+          <div class="icon" style="font-size:22px">&#128203;</div>
+          <h3 style="font-size:13px" data-i18n="history_drop">Arrastra tu JSON de historial aqu&iacute;</h3>
+          <p style="font-size:11px" data-i18n="history_format">Archivo JSON de un despliegue anterior</p>
+        </div>
+        <div id="historyStatus" style="display:none"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="goStep(2)" id="btnNext1" disabled data-i18n="btn_next_config">Siguiente: Configuraci&oacute;n</button>
+      </div>
+    </div>
+    <div class="panel" id="panel2">
+      <div class="card">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="connector_title" style="background:#0c4a6e">C</div> <span data-i18n="connector_title">Conexi&oacute;n del Conector</span> <span class="req">*</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field" style="margin-bottom:12px" id="f_connectorType">
+          <label data-i18n="connector_type_label">Tipo de Conector <span class="req">*</span></label>
+          <div style="display:flex;gap:16px;margin:6px 0">
+            <label style="font-size:12px;cursor:pointer">
+              <input type="radio" name="connectorType" value="edc" onchange="toggleConnectorType()">
+              <span data-i18n="connector_edc">Eclipse Dataspace Connector (EDC)</span>
+            </label>
+            <label style="font-size:12px;cursor:pointer">
+              <input type="radio" name="connectorType" value="rainbow" onchange="toggleConnectorType()">
+              <span data-i18n="connector_rainbow">Rainbow (Eunomia/UPM)</span>
+            </label>
+          </div>
+          <div id="connectorDescription" style="display:none;font-size:11px;padding:8px 12px;border-radius:var(--radius);margin-top:4px"></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label data-i18n="edc_url_label">URL de Management API <span class="req">*</span></label>
+            <input type="url" id="f_edcUrl" placeholder="https://edc.example.com/management/v3">
+            <div class="hint" data-i18n="edc_url_hint">URL base de la EDC Management API v3</div>
+          </div>
+          <div class="field" id="edcApiKeyField">
+            <label>API Key <span class="req">*</span></label>
+            <input type="password" id="f_edcApiKey" placeholder="X-Api-Key value">
+          </div>
+        </div>
+      </div>
+      <div class="card" id="cardServiceOffering">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" style="background:#7c3aed">S</div> <span data-i18n="so_title">Service Offering (Gaia-X)</span> <span class="req">*</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px" data-i18n="so_desc">URL de la Service Offering firmada publicada en tu Self-Description.</p>
+        <div class="field">
+          <label data-i18n="so_url_label">URL de la Service Offering <span class="req">*</span></label>
+          <input type="url" id="f_serviceOfferingUrl" placeholder="https://self-description.example.com/.well-known/service-offering-mi-api.json">
+          <div class="hint" data-i18n="so_url_hint">URL publica de la VC firmada de tipo gx:ServiceOffering</div>
+        </div>
+        <div id="soVerification" style="display:none"></div>
+      </div>
+      <div class="card">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="svc_title" style="background:#6f42c1">C</div> <span data-i18n="svc_title">Configuraci&oacute;n del Servicio</span> <span class="req">*</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field">
+          <label data-i18n="svc_url_label">URL Base del Backend <span class="req">*</span></label>
+          <input type="url" id="f_serviceUrl" placeholder="https://my-api.opendataspace.io">
+          <div class="hint" data-i18n="svc_url_hint">Donde est&aacute; corriendo la API desplegada (upstream para el EDC data plane)</div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label data-i18n="svc_api_name">Nombre de la API</label>
+            <input type="text" id="f_apiName" class="auto" readonly>
+          </div>
+          <div class="field">
+            <label data-i18n="svc_api_version">Versi&oacute;n de la API</label>
+            <input type="text" id="f_apiVersion" class="auto" readonly>
+          </div>
+        </div>
+        <div class="field">
+          <label data-i18n="svc_description">Descripci&oacute;n de la API</label>
+          <textarea id="f_description" class="auto" rows="3"></textarea>
+          <div class="hint" data-i18n="svc_description_hint">Auto-completada desde OpenAPI. Puedes editarla.</div>
+        </div>
+        <div class="field">
+          <label data-i18n="svc_basepath">Base Path</label>
+          <input type="text" id="f_basePath" class="auto" readonly>
+          <div class="hint" data-i18n="svc_basepath_hint">Ruta base extra&iacute;da de los servers de OpenAPI</div>
+        </div>
+        <div class="field" id="transferFormatField" style="display:none">
+          <label for="f_transferFormat" data-i18n="rainbow_transfer_format">Formato de Transferencia</label>
+          <select id="f_transferFormat">
+            <option value="http+pull">HTTP Pull (http+pull)</option>
+            <option value="http+push">HTTP Push (http+push)</option>
+          </select>
+          <div class="hint" data-i18n="rainbow_transfer_format_hint">Protocolo de transferencia de datos entre provider y consumer</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="policy_title" style="background:#0057b7">P</div> <span data-i18n="policy_title">Pol&iacute;ticas ODRL</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:6px" id="policyDescription" data-i18n="policy_dual_desc">El Contract Definition requiere dos policies separadas. La <strong>Access Policy</strong> controla qui&eacute;n <em>ve</em> el asset en el cat&aacute;logo. La <strong>Contract Policy</strong> controla qui&eacute;n puede <em>negociar</em> un contrato.</p>
+        <div style="font-size:11px;margin-bottom:14px;display:flex;gap:12px;flex-wrap:wrap">
+          <a href="https://www.w3.org/TR/odrl-model/" target="_blank" rel="noopener" style="color:var(--primary)">ODRL Spec &#8599;</a>
+          <a href="https://github.com/eclipse-tractusx/tractusx-edc/blob/main/docs/usage/management-api-walkthrough/02_policies.md" target="_blank" rel="noopener" style="color:var(--primary)">EDC Policies Guide &#8599;</a>
+          <a href="https://gaia-x.eu/wp-content/uploads/2024/09/Compliance-Document_24.06.pdf" target="_blank" rel="noopener" style="color:var(--primary)">Gaia-X Compliance 24.06 &#8599;</a>
+          <a href="https://github.com/catenax-eV/cx-odrl-profile" target="_blank" rel="noopener" style="color:var(--primary)">Catena-X ODRL Profile &#8599;</a>
+        </div>
+        <div style="display:flex;gap:0;margin-bottom:14px;border-bottom:2px solid var(--border)">
+          <button id="tabAccess" class="policy-tab active" onclick="switchPolicyTab('access')" style="flex:1;padding:10px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px">
+            <i class="fa-solid fa-eye"></i> Access Policy
+          </button>
+          <button id="tabContract" class="policy-tab" onclick="switchPolicyTab('contract')" style="flex:1;padding:10px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">
+            <i class="fa-solid fa-file-lines"></i> Contract Policy
+          </button>
+        </div>
+        <div id="policyTabAccess">
+          <p style="font-size:11px;color:#0369a1;background:#eff6ff;padding:8px;border-radius:var(--radius);margin-bottom:10px">
+            <strong data-i18n="access_policy_hint">Access Policy:</strong> <span data-i18n="access_policy_hint_desc">Determina si un consumidor puede ver el asset en el cat&aacute;logo. Ej: restringir por BPN o BusinessPartnerGroup.</span>
+          </p>
+
+          <div class="levels" style="margin-bottom:14px">
+            <div class="level-card level-1 selected" onclick="applyPolicyTemplate('1','access')">
+              <div class="level-badge">Level 1</div>
+              <h4 data-i18n="level1_name">Uso Abierto</h4>
+              <p data-i18n="level1_desc">Sin restricciones</p>
+            </div>
+            <div class="level-card level-2" onclick="applyPolicyTemplate('2','access')">
+              <div class="level-badge">Level 2</div>
+              <h4 data-i18n="level2_name">Membres&iacute;a</h4>
+              <p data-i18n="level2_desc">Membres&iacute;a Gaia-X</p>
+            </div>
+            <div class="level-card level-3" onclick="applyPolicyTemplate('3','access')">
+              <div class="level-badge">Level 3</div>
+              <h4 data-i18n="level3_name">Soberan&iacute;a UE</h4>
+              <p data-i18n="level3_desc">Solo EU/EEA</p>
+            </div>
+          </div>
+          <div style="text-align:center;margin-bottom:14px">
+            <button class="btn-add" onclick="applyPolicyTemplate('custom','access')" data-i18n="policy_custom_btn">o empezar con policy vac&iacute;a (Custom)</button>
+          </div>
+          <div id="accessTemplateWarning" class="alert alert-warn" style="display:none"></div>
+
+          <div class="policy-section">
+            <h4 style="color:var(--success)">&#9989; <span data-i18n="policy_permissions">Permisos (Permissions)</span></h4>
+            <p style="font-size:11px;color:var(--muted);margin-bottom:8px" data-i18n="access_perm_desc">Acci&oacute;n: <strong>access</strong>. Constraints que el consumidor debe cumplir para ver el asset:</p>
+            <div id="accessPermConstraints"></div>
+            <button class="btn-add" onclick="addConstraint('access')" data-i18n="policy_add_constraint">+ A&ntilde;adir constraint</button>
+          </div>
+          <div class="policy-section" style="margin-top:10px">
+            <h4 style="color:var(--danger)">&#9940; <span data-i18n="policy_prohibitions">Prohibiciones</span></h4>
+            <div id="accessProhibActions"></div>
+            <button class="btn-add" onclick="addProhibition('access')" data-i18n="policy_add_prohibition">+ A&ntilde;adir prohibici&oacute;n</button>
+          </div>
+          <div class="policy-section" style="margin-top:10px">
+            <h4 style="color:#0369a1">&#128221; <span data-i18n="policy_obligations">Obligaciones</span></h4>
+            <div id="accessObligActions"></div>
+            <button class="btn-add" onclick="addObligation('access')" data-i18n="policy_add_obligation">+ A&ntilde;adir obligaci&oacute;n</button>
+          </div>
+          <details style="margin-top:14px">
+            <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--primary)" data-i18n="policy_preview">Ver JSON ODRL generado</summary>
+            <pre id="accessPolicyPreview" style="background:#1e1e2e;color:#cdd6f4;padding:12px;border-radius:var(--radius);overflow-x:auto;font-size:11px;margin-top:8px;max-height:400px;overflow-y:auto"></pre>
+          </details>
+        </div>
+        <div id="policyTabContract" style="display:none">
+          <p style="font-size:11px;color:#7c3aed;background:#f5f3ff;padding:8px;border-radius:var(--radius);margin-bottom:10px">
+            <strong data-i18n="contract_policy_hint">Contract Policy:</strong> <span data-i18n="contract_policy_hint_desc">Determina las condiciones para negociar un contrato. Ej: requiere Membership, FrameworkAgreement, o credenciales SSI.</span>
+          </p>
+
+          <div class="levels" style="margin-bottom:14px">
+            <div class="level-card level-1 selected" onclick="applyPolicyTemplate('1','contract')">
+              <div class="level-badge">Level 1</div>
+              <h4 data-i18n="level1_name">Uso Abierto</h4>
+              <p data-i18n="level1_desc">Sin restricciones</p>
+            </div>
+            <div class="level-card level-2" onclick="applyPolicyTemplate('2','contract')">
+              <div class="level-badge">Level 2</div>
+              <h4 data-i18n="level2_name">Membres&iacute;a</h4>
+              <p data-i18n="level2_desc">Membres&iacute;a Gaia-X</p>
+            </div>
+            <div class="level-card level-3" onclick="applyPolicyTemplate('3','contract')">
+              <div class="level-badge">Level 3</div>
+              <h4 data-i18n="level3_name">Soberan&iacute;a UE</h4>
+              <p data-i18n="level3_desc">Solo EU/EEA</p>
+            </div>
+          </div>
+          <div style="text-align:center;margin-bottom:14px">
+            <button class="btn-add" onclick="applyPolicyTemplate('custom','contract')" data-i18n="policy_custom_btn">o empezar con policy vac&iacute;a (Custom)</button>
+          </div>
+          <div id="contractTemplateWarning" class="alert alert-warn" style="display:none"></div>
+
+          <div class="policy-section">
+            <h4 style="color:var(--success)">&#9989; <span data-i18n="policy_permissions">Permisos (Permissions)</span></h4>
+            <p style="font-size:11px;color:var(--muted);margin-bottom:8px" data-i18n="contract_perm_desc">Acci&oacute;n: <strong>use</strong>. Constraints para que el consumidor pueda negociar:</p>
+            <div id="contractPermConstraints"></div>
+            <button class="btn-add" onclick="addConstraint('contract')" data-i18n="policy_add_constraint">+ A&ntilde;adir constraint</button>
+          </div>
+          <div class="policy-section" style="margin-top:10px">
+            <h4 style="color:var(--danger)">&#9940; <span data-i18n="policy_prohibitions">Prohibiciones</span></h4>
+            <div id="contractProhibActions"></div>
+            <button class="btn-add" onclick="addProhibition('contract')" data-i18n="policy_add_prohibition">+ A&ntilde;adir prohibici&oacute;n</button>
+          </div>
+          <div class="policy-section" style="margin-top:10px">
+            <h4 style="color:#0369a1">&#128221; <span data-i18n="policy_obligations">Obligaciones</span></h4>
+            <div id="contractObligActions"></div>
+            <button class="btn-add" onclick="addObligation('contract')" data-i18n="policy_add_obligation">+ A&ntilde;adir obligaci&oacute;n</button>
+          </div>
+          <details style="margin-top:14px">
+            <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--primary)" data-i18n="policy_preview">Ver JSON ODRL generado</summary>
+            <pre id="contractPolicyPreview" style="background:#1e1e2e;color:#cdd6f4;padding:12px;border-radius:var(--radius);overflow-x:auto;font-size:11px;margin-top:8px;max-height:400px;overflow-y:auto"></pre>
+          </details>
+        </div>
+        <div id="policyFunctionWarning" style="display:none;margin-top:12px;padding:10px 12px;background:#fffbeb;border:1px solid #f59e0b;border-radius:var(--radius);font-size:11px;line-height:1.5">
+          <strong style="color:#b45309">&#9888; PolicyFunction requerida</strong>
+          <p style="margin:4px 0 0;color:#92400e" data-i18n="policyfn_warn_text">Tu policy usa operadores o leftOperands que requieren una extensi&oacute;n Java (PolicyFunction) en el runtime EDC. <strong>Sin ella, el EDC evaluar&aacute; estos constraints como TRUE silenciosamente</strong> — como si no existieran. Esto es un riesgo de seguridad: la policy parece proteger el dato, pero en realidad permite acceso libre.</p>
+          <p style="margin:6px 0 0;color:#92400e"><strong data-i18n="policyfn_warn_action">Acci&oacute;n requerida:</strong> <span data-i18n="policyfn_warn_detail">Aseg&uacute;rate de que tu conector EDC tenga la extensi&oacute;n <code>cx-policy</code> (Tractus-X) o la PolicyFunction correspondiente desplegada. Solo los operadores <code>eq</code>, <code>neq</code>, <code>in</code> son nativos sin extensiones.</span></p>
+        </div>
+      </div>
+      <div class="card" id="cardCatalogMeta">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="catalog_title" style="background:#0369a1">M</div> <span data-i18n="catalog_title">Metadatos del Cat&aacute;logo</span> <span style="font-size:11px;color:var(--muted);font-weight:400" data-i18n="catalog_optional">(opcional)</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field">
+          <label data-i18n="catalog_creator">Creador / Creator</label>
+          <input type="text" id="f_creator" placeholder="">
+          <div class="hint" data-i18n="catalog_creator_hint">Persona o equipo que cre&oacute; la API</div>
+        </div>
+        <div id="catalogEdcFields">
+          <div class="field-row">
+            <div class="field">
+              <label data-i18n="catalog_keywords">Palabras Clave / Keywords</label>
+              <input type="text" id="f_keywords" placeholder="api, datos, gaia-x">
+              <div class="hint" data-i18n="catalog_keywords_hint">Separadas por coma. Para descubrimiento en el cat&aacute;logo EDC</div>
+            </div>
+            <div class="field">
+              <label data-i18n="catalog_language">Idioma del Contenido / Content Language</label>
+              <select id="f_language">
+                <option value="">--</option>
+                <option value="es">Espa&ntilde;ol (es)</option>
+                <option value="en">English (en)</option>
+                <option value="de">Deutsch (de)</option>
+                <option value="fr">Fran&ccedil;ais (fr)</option>
+                <option value="pt">Portugu&ecirc;s (pt)</option>
+                <option value="it">Italiano (it)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="catalog_contenttype">Tipo de Contenido / Content Type</label>
+            <input type="text" id="f_contentType" value="application/json">
+          </div>
+          <div class="field">
+            <label data-i18n="resource_data_location">Ubicaci&oacute;n de Procesamiento de Datos</label>
+            <select id="f_dataLocation">
+              <option value="">--</option>
+              <option value="EU">EU</option>
+              <option value="EEA">EEA</option>
+              <option value="EU/EEA">EU/EEA</option>
+              <option value="Global">Global</option>
+            </select>
+            <div class="hint" data-i18n="resource_data_location_hint">D&oacute;nde se procesan los datos (relevante para soberan&iacute;a de datos)</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="cardGxParticipant">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="gx_participant_title" style="background:#92400e">P</div> <span data-i18n="gx_participant_title">Participante Legal (Gaia-X)</span> <span class="req">*</span> <span style="font-size:11px;color:var(--muted);font-weight:400" data-i18n="gx_participant_required">(obligatorio &mdash; Trust Framework 24.04)</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field-row">
+          <div class="field">
+            <label data-i18n="provider_legal">Raz&oacute;n Social <span class="req">*</span></label>
+            <input type="text" id="f_legalName" placeholder="Mi Empresa S.L.">
+          </div>
+          <div class="field">
+            <label data-i18n="provider_did">DID del Proveedor <span class="req">*</span></label>
+            <input type="text" id="f_providerDid" placeholder="did:web:example.com">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label data-i18n="provider_headquarter_country">Pa&iacute;s Sede Central <span class="req">*</span></label>
+            <input type="text" id="f_country" placeholder="ES" maxlength="2" style="text-transform:uppercase">
+            <div class="hint" data-i18n="val_invalid_country">C&oacute;digo ISO 3166-1 alpha-2 (ej: ES, DE)</div>
+          </div>
+          <div class="field">
+            <label data-i18n="provider_legal_address_country">Pa&iacute;s Direcci&oacute;n Legal <span class="req">*</span></label>
+            <input type="text" id="f_legalAddressCountry" placeholder="ES" maxlength="2" style="text-transform:uppercase">
+            <div class="hint" data-i18n="provider_legal_address_country_hint">C&oacute;digo ISO 3166-1 alpha-2 de la direcci&oacute;n legal</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label data-i18n="provider_legal_reg_type">Tipo de Registro Legal <span class="req">*</span></label>
+            <select id="f_legalRegType">
+              <option value="">-- Seleccionar --</option>
+              <option value="vatID">VAT ID</option>
+              <option value="leiCode">LEI Code</option>
+              <option value="EORI">EORI</option>
+              <option value="EUID">EUID</option>
+            </select>
+          </div>
+          <div class="field">
+            <label data-i18n="provider_legal_reg_value">N&uacute;mero de Registro <span class="req">*</span></label>
+            <input type="text" id="f_legalRegValue" placeholder="ESB12345678">
+            <div class="hint" data-i18n="provider_legal_reg_hint">Seg&uacute;n tipo: n&uacute;mero VAT, LEI (20 caracteres), EORI o EUID</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label data-i18n="provider_terms">URL T&eacute;rminos de Servicio <span class="req">*</span></label>
+            <input type="url" id="f_termsUrl" placeholder="https://example.com/terms">
+          </div>
+          <div class="field">
+            <label data-i18n="provider_terms_hash">Hash de T&eacute;rminos (SHA-256) <span class="req">*</span></label>
+            <input type="text" id="f_termsHash" placeholder="a1b2c3d4e5f6...">
+            <div class="hint" data-i18n="provider_terms_hash_hint">Hash SHA-256 del documento de t&eacute;rminos y condiciones</div>
+          </div>
+        </div>
+        <div class="field">
+          <label data-i18n="provider_email">Email de Contacto</label>
+          <input type="email" id="f_contact" class="auto" placeholder="api@example.com">
+        </div>
+      </div>
+      <div class="card" id="cardGxResource">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="gx_resource_title" style="background:#0d9488">R</div> <span data-i18n="gx_resource_title">Recurso de Datos/Software (Gaia-X)</span> <span class="req">*</span> <span style="font-size:11px;color:var(--muted);font-weight:400" data-i18n="gx_resource_required">(obligatorio &mdash; Trust Framework 24.04)</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field-row-3">
+          <div class="field">
+            <label data-i18n="provider_copyright">Titular del Copyright <span class="req">*</span></label>
+            <input type="text" id="f_copyright" placeholder="Mi Empresa S.L.">
+          </div>
+          <div class="field">
+            <label data-i18n="provider_license">Licencia (SPDX) <span class="req">*</span></label>
+            <input type="text" id="f_license" class="auto" placeholder="Apache-2.0">
+          </div>
+          <div class="field">
+            <label data-i18n="resource_contains_pii">&iquest;Contiene Datos Personales (PII)? <span class="req">*</span></label>
+            <div id="f_containsPII" style="display:flex;gap:16px;margin-top:6px">
+              <label style="font-size:12px;cursor:pointer"><input type="radio" name="containsPII" value="true"> <span data-i18n="resource_pii_yes">S&iacute;, contiene PII</span></label>
+              <label style="font-size:12px;cursor:pointer"><input type="radio" name="containsPII" value="false"> <span data-i18n="resource_pii_no">No contiene PII</span></label>
+            </div>
+            <div class="hint" data-i18n="resource_contains_pii_hint">Indica si los datos contienen informaci&oacute;n personal identificable (relevante para GDPR)</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="cardUpstreamAuth">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="auth_title" style="background:#dc2626">A</div> <span data-i18n="auth_title">Autenticaci&oacute;n del Upstream</span> <span style="font-size:11px;color:var(--muted);font-weight:400" data-i18n="auth_optional">(opcional &mdash; si el API upstream requiere auth)</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field">
+          <label data-i18n="auth_mode_label">M&eacute;todo de autenticaci&oacute;n</label>
+          <div style="display:flex;gap:16px;margin:6px 0;flex-wrap:wrap">
+            <label style="font-size:12px;cursor:pointer"><input type="radio" name="authMode" value="none" checked onchange="toggleAuthMode()"> <span data-i18n="auth_mode_none">Sin autenticaci&oacute;n</span></label>
+            <label style="font-size:12px;cursor:pointer"><input type="radio" name="authMode" value="direct" onchange="toggleAuthMode()"> <span data-i18n="auth_mode_direct">API Key / Token est&aacute;tico</span></label>
+            <label style="font-size:12px;cursor:pointer"><input type="radio" name="authMode" value="vault" onchange="toggleAuthMode()"> <span data-i18n="auth_mode_vault">Vault del EDC</span></label>
+            <label style="font-size:12px;cursor:pointer"><input type="radio" name="authMode" value="oauth2" onchange="toggleAuthMode()"> <span data-i18n="auth_mode_oauth2">OAuth2 Client Credentials</span></label>
+          </div>
+        </div>
+        <div id="authDirectFields" style="display:none">
+          <div class="alert alert-warn" data-i18n="auth_direct_warn">El token se guarda literal en el asset. Si expira, el asset dejar&aacute; de funcionar. Para tokens din&aacute;micos usa OAuth2.</div>
+          <div class="field-row">
+            <div class="field">
+              <label data-i18n="auth_key">Nombre del Header</label>
+              <input type="text" id="f_authKey" placeholder="Authorization">
+              <div class="hint" data-i18n="auth_key_hint">ej: Authorization, X-API-Key</div>
+            </div>
+            <div class="field">
+              <label data-i18n="auth_code">Valor del Header</label>
+              <input type="password" id="f_authCode" placeholder="Bearer eyJhbG...">
+              <div class="hint" data-i18n="auth_code_hint">El EDC enviar&aacute; este valor literal en cada petici&oacute;n</div>
+            </div>
+          </div>
+        </div>
+        <div id="authVaultFields" style="display:none">
+          <div class="alert alert-info" data-i18n="auth_vault_info">El EDC buscar&aacute; el secreto en su vault (HashiCorp, Azure KV, etc.) y lo inyectar&aacute; como header en cada petici&oacute;n.</div>
+          <div class="field-row">
+            <div class="field">
+              <label data-i18n="auth_vault_header">Nombre del Header</label>
+              <input type="text" id="f_vaultAuthKey" placeholder="Authorization">
+              <div class="hint" data-i18n="auth_key_hint">ej: Authorization, X-API-Key</div>
+            </div>
+            <div class="field">
+              <label data-i18n="auth_secret">Nombre del Secreto en Vault</label>
+              <input type="text" id="f_secretName" placeholder="my-api-secret">
+              <div class="hint" data-i18n="auth_secret_hint">Alias del secreto registrado en el vault del EDC</div>
+            </div>
+          </div>
+        </div>
+        <div id="authOAuth2Fields" style="display:none">
+          <div class="alert alert-success" data-i18n="auth_oauth2_info">Recomendado para tokens din&aacute;micos. El EDC pide tokens frescos autom&aacute;ticamente al token endpoint. Requiere extensi&oacute;n data-plane-http-oauth2.</div>
+          <div class="field">
+            <label data-i18n="auth_oauth2_url">Token URL <span class="req">*</span></label>
+            <input type="url" id="f_oauth2TokenUrl" placeholder="https://auth.example.com/oauth/token">
+            <div class="hint" data-i18n="auth_oauth2_url_hint">Endpoint OAuth2 para obtener tokens (grant_type=client_credentials)</div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label data-i18n="auth_oauth2_client">Client ID <span class="req">*</span></label>
+              <input type="text" id="f_oauth2ClientId" placeholder="my-client-id">
+            </div>
+            <div class="field">
+              <label data-i18n="auth_oauth2_secret">Client Secret Key (Vault) <span class="req">*</span></label>
+              <input type="text" id="f_oauth2ClientSecretKey" placeholder="my-oauth2-secret">
+              <div class="hint" data-i18n="auth_oauth2_secret_hint">Alias del client secret en el vault del EDC (no el secreto directo)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goStep(1)" data-i18n="btn_back">Atr&aacute;s</button>
+        <button class="btn btn-primary" onclick="goStep(3)" data-i18n="btn_next_ops">Siguiente: Operaciones</button>
+      </div>
+    </div>
+    <div class="panel" id="panel3">
+      <div class="card" id="reviewSoCard">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" style="background:#7c3aed">S</div> <span data-i18n="review_so_title">Service Offering vinculado</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div id="reviewSoContent" style="font-size:12px;padding:10px;background:#f6f8fa;border-radius:var(--radius)"></div>
+      </div>
+      <div class="card">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="review_policies_title" style="background:#0057b7">P</div> <span data-i18n="review_policies_title">Policies que se crear&aacute;n</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field-row" style="gap:16px" id="policyPreviewRow">
+          <div id="accessPolicyPreviewCard" style="padding:12px;background:#f9fafb;border:1px solid var(--border);border-radius:var(--radius)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:#0369a1"><i class="fa-solid fa-eye"></i> Access Policy</div>
+            <div id="previewAccessPolicy"></div>
+          </div>
+          <div style="padding:12px;background:#f9fafb;border:1px solid var(--border);border-radius:var(--radius)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:#7c3aed"><i class="fa-solid fa-file-lines"></i> Contract Policy</div>
+            <div id="previewContractPolicy"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="review_assets_title" style="background:var(--success)">A</div> <span data-i18n="review_assets_title">Assets (Operaciones)</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div id="assetsSummaryLine" style="font-size:13px;margin-bottom:10px;padding:8px;background:#f6f8fa;border-radius:var(--radius)"></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px" data-i18n="ops_desc">Cada operaci&oacute;n marcada se convierte en un Asset EDC. Desmarca para excluir.</p>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;cursor:pointer"><input type="checkbox" id="selectAll" checked onchange="toggleAll(this.checked)"> <span data-i18n="ops_select_all">Seleccionar Todo</span></label>
+        </div>
+        <div id="opsContainer">
+          <p style="color:var(--muted);font-size:13px" data-i18n="ops_empty">No hay operaciones cargadas. Vuelve al Paso 1.</p>
+        </div>
+      </div>
+      <div class="card" id="contractDefCard">
+        <h3><button type="button" class="card-header-toggle" onclick="toggleCard(this)"><div class="card-icon" data-i18n-icon="review_cd_title" style="background:#0c4a6e">C</div> <span data-i18n="review_cd_title">Contract Definition</span> <i class="fa-solid fa-chevron-down card-chevron"></i></button></h3>
+        <div class="field" style="margin-bottom:12px">
+          <label data-i18n="review_cd_id_label">ID del Contract Definition</label>
+          <input type="text" id="f_contractDefId" oninput="onCdIdInput()">
+          <div class="hint" data-i18n="review_cd_id_hint">Auto-generado desde el nombre de la API. Puedes editarlo.</div>
+        </div>
+        <div style="font-size:12px;display:flex;flex-direction:column;gap:6px;padding:10px;background:#f6f8fa;border-radius:var(--radius)">
+          <div><strong data-i18n="review_cd_policies">Policies referenciadas:</strong></div>
+          <div style="padding-left:12px">
+            <div>Access Policy: <code id="previewCdAccessPolicyId" style="font-size:11px;background:#e0f2fe;padding:1px 4px;border-radius:3px"></code></div>
+            <div style="margin-top:4px">Contract Policy: <code id="previewCdContractPolicyId" style="font-size:11px;background:#f3e8ff;padding:1px 4px;border-radius:3px"></code></div>
+          </div>
+          <div style="margin-top:4px"><strong data-i18n="review_cd_asset_count">Assets incluidos:</strong> <span id="previewCdAssetCount" style="font-weight:600;color:var(--success)">0</span></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goStep(2)" data-i18n="btn_back">Atr&aacute;s</button>
+        <button class="btn btn-success" onclick="deploy()" id="btnDeploy" data-i18n="btn_deploy">Desplegar en EDC</button>
+      </div>
+    </div>
+    <div class="panel" id="panel4">
+      <div id="loadingState" class="loading" style="display:none">
+        <div class="spinner"></div>
+        <p style="margin-top:12px;color:var(--muted)" data-i18n="loading_msg">Creando recursos en EDC...</p>
+      </div>
+      <div id="resultsContainer" style="display:none"></div>
+      <div class="btn-row" id="resultButtons" style="display:none">
+        <button class="btn btn-outline" onclick="goStep(1)" data-i18n="btn_start_over">Volver a Empezar</button>
+        <button class="btn btn-outline" onclick="downloadResults()" data-i18n="btn_download">Descargar JSON de Resultados</button>
+      </div>
+    </div>
+  </div>
+  <script src="js/i18n.js"></script>
+  <script src="js/policy-editor.js"></script>
+  <script src="js/validation.js"></script>
+  <script src="js/connector-ui.js"></script>
+  <script src="js/service-offering-ui.js"></script>
+  <script src="js/rainbow-results.js"></script>
+  <script src="js/deploy.js"></script>
+  <script src="js/review.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/iframe-config.js"></script>
+  <script src="js/iframe-bridge.js"></script>
+</body>
+</html>

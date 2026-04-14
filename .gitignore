@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build / generated output
+output/
+
+# API spec (generated)
+spec.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+docs/

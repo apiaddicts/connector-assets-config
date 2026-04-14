@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test iframe postMessage (simula APIQuality)</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #00d4aa; font-size: 18px; }
+    .controls { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .btn-send { background: #00d4aa; color: #1a1a2e; }
+    .btn-send-history { background: #f0a500; color: #1a1a2e; }
+    .btn-clear { background: #e74c3c; color: white; }
+    iframe { width: 100%; height: 75vh; border: 2px solid #00d4aa; border-radius: 8px; }
+    .log { background: #0d0d1a; border: 1px solid #333; border-radius: 6px; padding: 12px; margin-top: 15px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
+    .log-entry { margin-bottom: 8px; padding: 6px; border-left: 3px solid #00d4aa; padding-left: 10px; }
+    .log-entry.received { border-left-color: #f0a500; }
+  </style>
+</head>
+<body>
+  <h1>Test: Simulador de APIQuality (postMessage al iframe)</h1>
+
+  <div class="controls">
+    <button class="btn-send" onclick="sendOpenApi()">Enviar OpenAPI (solo spec)</button>
+    <button class="btn-send-history" onclick="sendWithHistory()">Enviar OpenAPI + Historial</button>
+    <button class="btn-clear" onclick="clearLog()">Limpiar log</button>
+  </div>
+
+  <iframe id="edcConfigFrame" src="/index.html"></iframe>
+
+  <div class="log" id="logArea">
+    <em>Esperando mensajes...</em>
+  </div>
+
+<script>
+// ── Sample OpenAPI spec ─────────────────────────────────────────
+var sampleOpenApi = {
+  openapi: "3.0.3",
+  info: {
+    title: "Petstore API",
+    description: "A sample Petstore API for testing iframe communication",
+    version: "1.0.0",
+    contact: { email: "test@example.com", url: "https://example.com" },
+    license: { name: "Apache-2.0", url: "https://www.apache.org/licenses/LICENSE-2.0" }
+  },
+  servers: [{ url: "https://api.petstore.example.com/v1" }],
+  paths: {
+    "/pets": {
+      get: {
+        operationId: "listPets",
+        summary: "List all pets",
+        responses: { "200": { description: "A list of pets" } }
+      },
+      post: {
+        operationId: "createPet",
+        summary: "Create a pet",
+        responses: { "201": { description: "Pet created" } }
+      }
+    },
+    "/pets/{petId}": {
+      get: {
+        operationId: "getPetById",
+        summary: "Get a pet by ID",
+        parameters: [{ name: "petId", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "A pet" } }
+      },
+      delete: {
+        operationId: "deletePet",
+        summary: "Delete a pet",
+        parameters: [{ name: "petId", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "204": { description: "Pet deleted" } }
+      }
+    }
+  }
+};
+
+// ── Sample history (simulates a previous deploy result) ──────────
+// Must have `resources` and `config` keys to pass validation
+var sampleHistory = {
+  resources: {
+    assets: [
+      { id: "petstore-api-listPets", status: "created" },
+      { id: "petstore-api-createPet", status: "created" }
+    ],
+    accessPolicy: { id: "petstore-api-access-policy", status: "created" },
+    contractPolicy: { id: "petstore-api-contract-policy", status: "created" }
+  },
+  config: {
+    edcUrl: "https://edc.example.com/management",
+    serviceBaseUrl: "https://api.petstore.example.com",
+    apiName: "Petstore API",
+    apiVersion: "1.0.0",
+    basePath: "/v1",
+    description: "A sample Petstore API for testing",
+    provider: {
+      did: "did:web:example.com",
+      legalName: "Example Corp S.L.",
+      copyrightOwner: "Example Corp S.L.",
+      licenseSpdx: "Apache-2.0",
+      contactEmail: "test@example.com",
+      country: "ES",
+      termsUrl: "https://example.com/terms"
+    },
+    catalog: {
+      keywords: "pets, animals, api",
+      language: "en",
+      contentType: "application/json",
+      creator: "Example Corp"
+    }
+  }
+};
+
+// ── Encode to base64 (UTF-8 safe) ──────────────────────────────
+function toB64(obj) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+}
+
+// ── Send only OpenAPI ───────────────────────────────────────────
+function sendOpenApi() {
+  var iframe = document.getElementById('edcConfigFrame');
+  var payload = {
+    openapi_b64: toB64(sampleOpenApi)
+  };
+  iframe.contentWindow.postMessage(payload, '*');
+  addLog('sent', 'Enviado OpenAPI (sin historial). Campos: openapi_b64');
+}
+
+// ── Send OpenAPI + History ──────────────────────────────────────
+function sendWithHistory() {
+  var iframe = document.getElementById('edcConfigFrame');
+  var payload = {
+    openapi_b64: toB64(sampleOpenApi),
+    history_b64: toB64(sampleHistory)
+  };
+  iframe.contentWindow.postMessage(payload, '*');
+  addLog('sent', 'Enviado OpenAPI + Historial. Campos: openapi_b64, history_b64');
+}
+
+// ── Listen for response from iframe ─────────────────────────────
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.config_b64) {
+    try {
+      var config = JSON.parse(decodeURIComponent(escape(atob(event.data.config_b64))));
+      addLog('received', 'Recibido config_b64 del formulario:\n' + JSON.stringify(config, null, 2).substring(0, 500) + '...');
+    } catch (e) {
+      addLog('received', 'Error decodificando respuesta: ' + e.message);
+    }
+  }
+});
+
+// ── Log helpers ─────────────────────────────────────────────────
+function addLog(type, msg) {
+  var log = document.getElementById('logArea');
+  if (log.querySelector('em')) log.innerHTML = '';
+  var entry = document.createElement('div');
+  entry.className = 'log-entry ' + (type === 'received' ? 'received' : '');
+  var time = new Date().toLocaleTimeString();
+  entry.textContent = '[' + time + '] ' + (type === 'sent' ? 'ENVIADO' : 'RECIBIDO') + ': ' + msg;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('logArea').innerHTML = '<em>Esperando mensajes...</em>';
+}
+</script>
+</body>
+</html>
