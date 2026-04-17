@@ -1,4 +1,4 @@
-# Conector-Assets-Config
+# Connector-Assets-Config
 
  ![Javascript](https://img.shields.io/badge/javascript-F7DF1E.svg?style=flat&logo=javascript&logoColor=white)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/apiaddicts/conector-assets-config)
@@ -18,6 +18,80 @@ It reads an OpenAPI specification, allows you to configure ODRL policies and Gai
 - **Assets** — one per operation of the selected API
 - **Policies** — Access Policy + Contract Policy (ODRL/JSON-LD)
 - **Contract Definition** — links policies to assets
+
+## Requirements
+
+- Node.js 18+
+- Access to an EDC connector with Management API v3
+
+## Installation
+
+```bash
+git clone <repo-url>
+cd opendataspace-edc-config
+npm install
+```
+
+## Run the project
+
+```bash
+npm start
+```
+
+The server starts at `http://localhost:3000` (or the port specified in `PORT`).
+
+## Usage
+
+1. Open `http://localhost:3000` in your browser
+2. **Step 1 — OpenAPI**: Upload an OpenAPI spec (YAML or JSON). Optionally, upload a JSON file containing the history from a previous deployment to edit existing resources
+3. **Step 2 — Configuration**: Enter the EDC Management API URL, service details, provider, catalog, upstream authentication, and ODRL policy level (Level 1/2/3/Custom)
+4. **Step 3 — Review**: Verify the preview of policies, assets, and Contract Definition. Edit the CD ID if necessary
+5. **Step 4 — Deploy**: Run the reconciliation. The app creates/updates/deletes the necessary resources in the EDC and displays the results
+6. **Download results**: The generated JSON can be downloaded and reused as a history for future deployments
+
+## EDC Connector API Endpoints
+
+| Method | URL | Description |
+|--------|------|-------------|
+| POST | `/api/parse-openapi` | Parses OpenAPI spec, returns operations |
+| POST | `/api/create-edc-resources` | Reconciles resources in EDC |
+| GET | `/api/configs` | Lists saved configurations |
+| GET | `/api/configs/:filename` | Retrieves a saved configuration |
+| GET | `/api/health` | Health check |
+
+## Integration via iframe (PostMessage)
+
+The app can be embedded in an iframe. Communication is handled via `postMessage`.
+
+### What the form needs
+
+```json
+{
+  “openapi_yaml_in_base64”: “string (REQUIRED)”,
+  “history_b64”: “string (OPTIONAL — previous configuration for editing)”
+}
+```
+
+### What the form returns
+
+```json
+{
+  “files”: [
+    {
+      “filename”: “edc-config.json”,
+      “content_in_base64”: “string (JSON of the deployment result in base64)”
+    }
+  ]
+}
+```
+
+## Tech Stack
+
+- **Backend**: Node.js + Express
+- **Frontend**: Vanilla JS (no framework, no bundler)
+- **EDC API**: Management API v3 (JSON-LD payloads)
+- **Policies**: ODRL with EDC contexts + ODRL
+- **i18n**: Custom implementation with ES/EN
 
 ## UI Workflow
 
@@ -212,76 +286,3 @@ Each selected operation from the OpenAPI is converted into an EDC asset with:
 | **Vault** | Header + EDC vault secret | `authKey` + `secretName` |
 | **OAuth2** | Automatic client credentials | `oauth2:tokenUrl` + `oauth2:clientId` + `oauth2:clientSecretKey` |
 
-## Requirements
-
-- Node.js 18+
-- Access to an EDC connector with Management API v3
-
-## Installation
-
-```bash
-git clone <repo-url>
-cd opendataspace-edc-config
-npm install
-```
-
-## Run the project
-
-```bash
-npm start
-```
-
-The server starts at `http://localhost:3000` (or the port specified in `PORT`).
-
-## Usage
-
-1. Open `http://localhost:3000` in your browser
-2. **Step 1 — OpenAPI**: Upload an OpenAPI spec (YAML or JSON). Optionally, upload a JSON file containing the history from a previous deployment to edit existing resources
-3. **Step 2 — Configuration**: Enter the EDC Management API URL, service details, provider, catalog, upstream authentication, and ODRL policy level (Level 1/2/3/Custom)
-4. **Step 3 — Review**: Verify the preview of policies, assets, and Contract Definition. Edit the CD ID if necessary
-5. **Step 4 — Deploy**: Run the reconciliation. The app creates/updates/deletes the necessary resources in the EDC and displays the results
-6. **Download results**: The generated JSON can be downloaded and reused as a history for future deployments
-
-## EDC API Endpoints
-
-| Method | URL | Description |
-|--------|------|-------------|
-| POST | `/api/parse-openapi` | Parses OpenAPI spec, returns operations |
-| POST | `/api/create-edc-resources` | Reconciles resources in EDC |
-| GET | `/api/configs` | Lists saved configurations |
-| GET | `/api/configs/:filename` | Retrieves a saved configuration |
-| GET | `/api/health` | Health check |
-
-## Integration via iframe (PostMessage)
-
-The app can be embedded in an iframe. Communication is handled via `postMessage`.
-
-### What the form needs
-
-```json
-{
-  “openapi_yaml_in_base64”: “string (REQUIRED)”,
-  “history_b64”: “string (OPTIONAL — previous configuration for editing)”
-}
-```
-
-### What the form returns
-
-```json
-{
-  “files”: [
-    {
-      “filename”: “edc-config.json”,
-      “content_in_base64”: “string (JSON of the deployment result in base64)”
-    }
-  ]
-}
-```
-
-## Tech Stack
-
-- **Backend**: Node.js + Express
-- **Frontend**: Vanilla JS (no framework, no bundler)
-- **EDC API**: Management API v3 (JSON-LD payloads)
-- **Policies**: ODRL with EDC contexts + ODRL
-- **i18n**: Custom implementation with ES/EN
