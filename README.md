@@ -1,194 +1,180 @@
-# opendataspace-edc-config
+# Conector-Assets-Config
 
-Web app para configurar y desplegar assets de API en Eclipse Dataspace Connector (EDC), siguiendo el framework Gaia-X.
+ ![Javascript](https://img.shields.io/badge/javascript-F7DF1E.svg?style=flat&logo=javascript&logoColor=white)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/apiaddicts/conector-assets-config)
 
-## Qué hace
+Web app for configuring and deploying API assets in Eclipse Dataspace Connector (EDC), following the Gaia-X framework.
 
-Lee una especificación OpenAPI, permite configurar policies ODRL y metadatos Gaia-X, y crea los recursos necesarios en un conector EDC:
+<p align="center">
+	<a href="https://apiaddicts.org/">
+	  <img src="./images/asset-form.png" width = '700'>
+	</a>
+</p>
 
-- **Assets** — uno por operación de la API seleccionada
+## What it does
+
+It reads an OpenAPI specification, allows you to configure ODRL policies and Gaia-X metadata, and creates the necessary resources in an EDC connector:
+
+- **Assets** — one per operation of the selected API
 - **Policies** — Access Policy + Contract Policy (ODRL/JSON-LD)
-- **Contract Definition** — vincula policies con assets
+- **Contract Definition** — links policies to assets
 
-## Flujo de la UI
+## UI Workflow
 
-| Step | Nombre | Descripción |
+| Step | Name | Description |
 |------|--------|-------------|
-| 1 | **OpenAPI** | Carga spec OpenAPI (YAML/JSON) + historial previo opcional |
-| 2 | **Configuración** | Conexión EDC, servicio, policies ODRL (Level 1/2/3/Custom), catálogo, proveedor, auth |
-| 3 | **Revisar** | Preview de policies, assets y Contract Definition antes de desplegar. Permite editar el ID del CD |
-| 4 | **Despliegue** | Reconcilia recursos en EDC y muestra resultados |
+| 1 | **OpenAPI** | Load OpenAPI spec (YAML/JSON) + optional history |
+| 2 | **Configuration** | EDC connection, service, ODRL policies (Level 1/2/3/Custom), catalog, provider, auth |
+| 3 | **Review** | Preview policies, assets, and Contract Definition before deployment. Allows editing the CD ID |
+| 4 | **Deployment** | Reconciles resources in EDC and displays results |
 
-## Arquitectura
+## History and Edits
 
-```
-server.js                  → Express routes (thin controller)
-server/
-  openapi-parser.js        → OpenAPI spec parsing + operation extraction
-  reconciler.js            → EDC resource reconciliation orchestration
-  output-builder.js        → JSON response construction from reconcile results
-  edc-client.js            → HTTP helpers for EDC Management API (GET/POST/PUT/DELETE)
-  policy-builder.js        → ODRL policy payload generation
-  asset-builder.js         → EDC asset payload generation
-  helpers.js               → Shared utilities (slugify, extractBasePath)
-public/
-  index.html               → HTML structure only — NO inline JS, NO inline CSS
-  css/styles.css           → All styles
-  js/i18n.js               → Translations (ES/EN) + t() + setLang()
-  js/policy-editor.js      → Policy editor state, constants, rendering, preview
-  js/review.js             → Step 3 review/preview: policies, assets summary, contract def
-  js/deploy.js             → Navigation, deploy, conflict dialog, results rendering, download
-  js/app.js                → App globals, file handling, history, ops table, init
-  js/iframe-bridge.js      → PostMessage bridge for embedding in APIQuality
-```
+### Loading Previous History (Step 1)
 
-## Historial y ediciones
+When loading a JSON file containing the results of a previous deployment, the app:
 
-### Carga de historial previo (Step 1)
+1. **Pre-fills the form** — EDC URL, service, provider, catalog, and auth are retrieved from the history
+2. **Marks operations as “Deployed”** — compares the asset IDs in the history with the operations in the current OpenAPI
+3. **Detects changes** — in Step 3, it shows how many assets are new, how many will be updated, and how many will be deleted
+4. **Allows incremental editing** — add/remove operations, change policies, modify metadata without losing previous data
 
-Al cargar un JSON de resultado de un despliegue anterior, la app:
-
-1. **Pre-llena el formulario** — EDC URL, servicio, proveedor, catálogo, auth se recuperan del historial
-2. **Marca operaciones como "Desplegadas"** — compara los asset IDs del historial con las operaciones del OpenAPI actual
-3. **Detecta cambios** — en Step 3 muestra cuántos assets son nuevos, cuántos se actualizarán y cuántos se eliminarán
-4. **Permite edición incremental** — añadir/quitar operaciones, cambiar policies, modificar metadatos sin perder lo anterior
-
-### Flujo de edición típico
+### Typical Editing Workflow
 
 ```
-1. Cargar OpenAPI (nuevo o el mismo)
-2. Cargar JSON de historial del despliegue anterior
-3. Hacer cambios:
-   - Marcar/desmarcar operaciones → añade/elimina assets
-   - Cambiar nivel de policy → actualiza policies
-   - Editar metadatos → actualiza assets
-4. Step 3 muestra preview con diff: "3 nuevos, 5 se actualizarán, 1 se eliminará"
-5. Desplegar → el reconciler aplica solo los cambios necesarios
+1. Load OpenAPI (new or existing)
+2. Load JSON from the previous deployment history
+3. Make changes:
+   - Check/uncheck operations → adds/removes assets
+   - Change policy level → updates policies
+   - Edit metadata → updates assets
+4. Step 3 shows a preview with diff: “3 new, 5 will be updated, 1 will be removed”
+5. Deploy → the reconciler applies only the necessary changes
 ```
 
-### Resultado descargable
+### Downloadable Output
 
-Tras cada despliegue, se genera un JSON con:
-- Config completa (EDC URL, servicio, proveedor, policies, catálogo)
-- Recursos creados (assets, policies, contract definition) con sus payloads y estados
+After each deployment, a JSON file is generated containing:
+- Complete configuration (EDC URL, service, provider, policies, catalog)
+- Created resources (assets, policies, contract definition) along with their payloads and statuses
 - Timestamp
 
-Este JSON sirve como historial para el próximo despliegue y se guarda automáticamente en `output/`.
+This JSON file serves as a history for the next deployment and is automatically saved in `output/`.
 
-## Reconciliación EDC
+## EDC Reconciliation
 
-El reconciler sigue este orden al desplegar:
+The reconciler follows this order during deployment:
 
-1. **Eliminar Contract Definition** existente (desbloquea policies/assets)
-2. **Detectar conflictos** — si hay un Contract Agreement activo, el CD no se puede borrar (409)
-3. **Crear/actualizar Policies** (DELETE + POST, EDC no soporta PUT real en policies)
-4. **Crear/actualizar Assets** (DELETE + POST) + eliminar assets obsoletos del historial
-5. **Crear Contract Definition** con el ID elegido por el usuario
+1. **Delete existing Contract Definition** (unlocks policies/assets)
+2. **Detect conflicts** — if there is an active Contract Agreement, the CD cannot be deleted (409)
+3. **Create/update Policies** (DELETE + POST; EDC does not support actual PUT operations on policies)
+4. **Create/update Assets** (DELETE + POST) + remove obsolete assets from history
+5. **Create Contract Definition** with the ID chosen by the user
 
-### Por qué DELETE + POST en vez de PUT
+### Why DELETE + POST Instead of PUT
 
-- EDC devuelve **405** en PUT de assets (no soportado)
-- EDC **acepta** PUT en policies pero **ignora los cambios** silenciosamente
-- Solución: siempre DELETE del recurso existente + POST del nuevo
-- Las policies no se pueden borrar mientras estén referenciadas por un CD → por eso se borra el CD primero (paso 1)
+- EDC returns a **405** error on PUT requests for assets (not supported)
+- EDC **accepts** PUT on policies but **silently ignores the changes**
+- Solution: always DELETE the existing resource + POST the new one
+- Policies cannot be deleted while they are referenced by a CD → that is why the CD is deleted first (step 1) 
 
-## Manejo de errores
+## Error Handling
 
-### Policy rechazada por el conector (HTTP 422)
+### Policy Rejected by the Connector (HTTP 422)
 
-Si el conector EDC no soporta el nivel de policy seleccionado (ej: Level 2 o 3 sin extensiones Java instaladas):
+If the EDC connector does not support the selected policy level (e.g., Level 2 or 3 without Java extensions installed):
 
-1. El servidor detecta el error al intentar crear la policy (el EDC devuelve 400)
-2. **Se detiene el despliegue completo** — no se crean assets ni Contract Definition
-3. El frontend vuelve al **Step 2** (configuración de policies)
-4. Se muestra un banner de error con:
-   - Qué policy fue rechazada y el error del EDC
-   - Qué **sí soporta** el conector (Level 1, operators nativos `eq`/`neq`/`in`)
-   - Qué **no soporta** sin extensiones Java (Level 2, Level 3, leftOperands custom)
+1. The server detects the error when attempting to create the policy (the EDC returns a 400 error)
+2. **The entire deployment is halted** — no assets or Contract Definitions are created
+3. The frontend returns to **Step 2** (policy configuration)
+4. An error banner is displayed showing:
+   - Which policy was rejected and the EDC error
+   - What the connector **does support** (Level 1, native operators `eq`/`neq`/`in`)
+   - What it **does not support** without Java extensions (Level 2, Level 3, custom leftOperands) 
 
-### Conflicto por contrato activo (HTTP 409)
+### Conflict due to active contract (HTTP 409)
 
-Cuando existe un Contract Agreement negociado sobre el Contract Definition actual, el EDC no permite borrar el CD. El flujo es:
+When there is a Contract Agreement negotiated on the current Contract Definition, the EDC does not allow the CD to be deleted. The flow is:
 
-1. El reconciler detecta el 409 al intentar borrar el CD
-2. Se calcula un **diff** consultando el estado actual en el EDC:
-   - Cambios en policies (nivel actual vs deseado)
-   - Assets añadidos, eliminados y sin cambios
-3. Se muestra un **diálogo de conflicto** con 3 opciones:
+1. The reconciler detects the 409 error when attempting to delete the CD
+2. A **diff** is calculated by checking the current status in the EDC:
+   - Changes in policies (current vs. desired)
+   - Assets added, removed, and unchanged
+3. A **conflict dialog** is displayed with 3 options:
 
-| Opción | Comportamiento |
+| Option | Behavior |
 |--------|---------------|
-| **Eliminar y recrear** | Intenta forzar DELETE + POST con el mismo ID. Si el EDC lo bloquea, muestra el error real |
-| **Crear nuevo CD** | Crea un CD con ID versionado (`{id}-v{timestamp}`), reutilizando las mismas policies. El CD anterior sigue sirviendo contratos existentes |
-| **Cancelar** | Vuelve al Step 3 sin hacer cambios |
+| **Delete and recreate** | Attempts to force DELETE + POST with the same ID. If the EDC blocks it, displays the actual error |
+| **Create new CD** | Creates a CD with a versioned ID (`{id}-v{timestamp}`), reusing the same policies. The previous CD continues to serve existing contracts |
+| **Cancel** | Returns to Step 3 without making changes |
 
-### Errores de conexión
+### Connection Errors
 
-Si el servidor o el conector EDC no responden, se muestra el error de red en Step 4 con opción de volver a intentar.
+If the server or the EDC connector does not respond, a network error is displayed in Step 4 with the option to retry.
 
-### Warnings en el editor de policies (Step 2)
+### Warnings in the policy editor (Step 2)
 
-- **Level 2/3**: Se muestra un aviso de que requieren extensiones Java (SSI Gaia-X)
-- **Custom operators/leftOperands**: Se muestra un warning de `PolicyFunction requerida` explicando que sin la extensión Java, el EDC evaluará el constraint como TRUE silenciosamente (riesgo de seguridad)
+- **Level 2/3**: A warning is displayed indicating that Java extensions are required (SSI Gaia-X)
+- **Custom operators/leftOperands**: A warning for `PolicyFunction required` is displayed, explaining that without the Java extension, the EDC will silently evaluate the constraint as TRUE (security risk)
 
-## Policies ODRL
+## ODRL Policies
 
-### Estructura dual
+### Dual Structure
 
-El Contract Definition requiere **dos policies separadas**:
+The Contract Definition requires **two separate policies**:
 
-- **Access Policy** — controla quién **ve** el asset en el catálogo. Acción: `access`
-- **Contract Policy** — controla quién puede **negociar** un contrato. Acción: `use`
+- **Access Policy** — controls who **views** the asset in the catalog. Action: `access`
+- **Contract Policy** — controls who can **negotiate** a contract. Action: `use`
 
-Cada una se configura independientemente con su propio nivel y constraints.
+Each is configured independently with its own level and constraints.
 
-### Niveles
+### Levels
 
-| Level | Descripción | Constraints | Requisitos del conector |
+| Level | Description | Constraints | Connector Requirements |
 |-------|-------------|-------------|------------------------|
-| Level 1 | Uso abierto | Ninguno (`odrl:use` sin restricciones) | Vanilla EDC |
-| Level 2 | Membresía Gaia-X | `Membership eq active` + prohibición `distribute` | Extensión SSI Gaia-X |
-| Level 3 | Soberanía UE | Membership + `DataProcessing.location eq EU/EEA` + prohibiciones transfer/distribute/derive | 2 extensiones SSI + infra EU |
-| Custom | Editor libre | Constraints, prohibiciones y obligaciones configurables | Depende de los operadores usados |
+| Level 1 | Open Use | None (`odrl:use` without restrictions) | Vanilla EDC |
+| Level 2 | Gaia-X Membership | `Membership eq active` + `distribute` prohibition | Gaia-X SSI Extension |
+| Level 3 | EU Sovereignty | Membership + `DataProcessing.location eq EU/EEA` + transfer/distribute/derive prohibitions | 2 SSI extensions + EU infrastructure |
+| Custom | Open Editor | Configurable constraints, prohibitions, and obligations | Depends on the operators used |
 
-### Formato JSON-LD
+### JSON-LD Format
 
-Las policies se envían al EDC con este formato:
+Policies are sent to the EDC in this format:
 
 ```json
 {
-  "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
-  "@type": "PolicyDefinition",
-  "@id": "{slug}-access-policy",
-  "policy": {
-    "@context": "http://www.w3.org/ns/odrl.jsonld",
-    "@type": "Set",
-    "permission": [{ "action": "use" }]
+  “@context”: { “@vocab”: “https://w3id.org/edc/v0.0.1/ns/” },
+  “@type”: “PolicyDefinition”,
+  “@id”: “{slug}-access-policy”,
+  “policy”: {
+    “@context”: “http://www.w3.org/ns/odrl.jsonld”,
+    “@type”: “Set”,
+    “permission”: [{ ‘action’: “use” }]
   }
 }
 ```
 
-El contexto exterior es el namespace EDC (`@vocab`), el interior es ODRL estándar.
+The outer namespace is EDC (`@vocab`), and the inner namespace is standard ODRL.
 
-### Editor de policies custom
+### Custom Policy Editor
 
-El editor permite añadir:
+The editor allows you to add:
 
-- **Constraints** (permission) — leftOperand + operator + rightOperand. Catálogo completo de operandos Catena-X y Gaia-X con autocompletado de valores conocidos
-- **Prohibiciones** — acciones ODRL que el consumidor NO puede realizar (distribute, transfer, derive, etc.), con constraints opcionales
-- **Obligaciones** — acciones que el consumidor DEBE realizar (inform, compensate, etc.), con constraints opcionales
+- **Constraints** (permission) — leftOperand + operator + rightOperand. Complete catalog of Catena-X and Gaia-X operands with autocomplete for known values
+- **Prohibitions** — ODRL actions that the consumer CANNOT perform (distribute, transfer, derive, etc.), with optional constraints
+- **Obligations** — actions that the consumer MUST perform (inform, compensate, etc.), with optional constraints
 
-Operators nativos del EDC (sin extensiones): `eq`, `neq`, `in`. Cualquier otro operator o leftOperand custom requiere una PolicyFunction Java.
+Native EDC operators (without extensions): `eq`, `neq`, `in`. Any other custom operator or leftOperand requires a Java PolicyFunction.
 
 ## Contract Definition
 
-### Generación del ID
+### ID Generation
 
-- Auto-generado: `{slugify(apiName)}-contract-def`
-- Editable en Step 3 — el usuario puede cambiarlo antes de desplegar
-- Si hay conflicto y el usuario elige "Crear nuevo", se versiona: `{id}-v{timestamp}`
+- Auto-generated: `{slugify(apiName)}-contract-def`
+- Editable in Step 3 — the user can change it before deployment
+- If there is a conflict and the user chooses “Create New,” it is versioned: `{id}-v{timestamp}`
 
-### Estructura
+### Structure
 
 ```json
 {
@@ -208,30 +194,30 @@ Operators nativos del EDC (sin extensiones): `eq`, `neq`, `in`. Cualquier otro o
 
 ## Assets
 
-Cada operación seleccionada del OpenAPI se convierte en un asset EDC con:
+Each selected operation from the OpenAPI is converted into an EDC asset with:
 
 - **ID**: `{slug}-{operationId}`
-- **Metadatos**: nombre, descripción, versión, método HTTP, path, summary
-- **Catálogo**: keywords, idioma, contentType, creator
-- **Proveedor**: DID, razón social, copyright, licencia SPDX, email, país, términos
-- **Data Address**: URL upstream + basePath + path de la operación
-- **Auth**: según el modo elegido (none, API key, vault, OAuth2 client credentials)
+- **Metadata**: name, description, version, HTTP method, path, summary
+- **Catalog**: keywords, language, contentType, creator
+- **Provider**: DID, business name, copyright, SPDX license, email, country, terms
+- **Data Address**: upstream URL + basePath + operation path
+- **Auth**: depending on the selected mode (none, API key, vault, OAuth2 client credentials)
 
-## Autenticación del upstream
+## Upstream Authentication
 
-| Modo | Descripción | Campo en dataAddress |
+| Mode | Description | Field in dataAddress |
 |------|-------------|---------------------|
-| **None** | Sin autenticación | — |
-| **API Key / Token** | Header + valor estático | `authKey` + `authCode` |
-| **Vault** | Header + secreto del vault EDC | `authKey` + `secretName` |
-| **OAuth2** | Client credentials automático | `oauth2:tokenUrl` + `oauth2:clientId` + `oauth2:clientSecretKey` |
+| **None** | No authentication | — |
+| **API Key / Token** | Header + static value | `authKey` + `authCode` |
+| **Vault** | Header + EDC vault secret | `authKey` + `secretName` |
+| **OAuth2** | Automatic client credentials | `oauth2:tokenUrl` + `oauth2:clientId` + `oauth2:clientSecretKey` |
 
-## Requisitos
+## Requirements
 
 - Node.js 18+
-- Acceso a un conector EDC con Management API v3
+- Access to an EDC connector with Management API v3
 
-## Instalación
+## Installation
 
 ```bash
 git clone <repo-url>
@@ -239,97 +225,63 @@ cd opendataspace-edc-config
 npm install
 ```
 
-## Ejecutar el proyecto
+## Run the project
 
 ```bash
 npm start
 ```
 
-El servidor arranca en `http://localhost:3000` (o el puerto definido en `PORT`).
+The server starts at `http://localhost:3000` (or the port specified in `PORT`).
 
-## Uso
+## Usage
 
-1. Abrir `http://localhost:3000` en el navegador
-2. **Step 1 — OpenAPI**: Cargar una spec OpenAPI (YAML o JSON). Opcionalmente, cargar un JSON de historial de un despliegue anterior para editar recursos existentes
-3. **Step 2 — Configuración**: Rellenar la URL del Management API del EDC, datos del servicio, proveedor, catálogo, autenticación del upstream y nivel de policies ODRL (Level 1/2/3/Custom)
-4. **Step 3 — Revisar**: Verificar el preview de policies, assets y Contract Definition. Editar el ID del CD si es necesario
-5. **Step 4 — Desplegar**: Lanzar la reconciliación. La app crea/actualiza/elimina los recursos necesarios en el EDC y muestra los resultados
-6. **Descargar resultado**: El JSON generado se puede descargar y reutilizar como historial en futuros despliegues
+1. Open `http://localhost:3000` in your browser
+2. **Step 1 — OpenAPI**: Upload an OpenAPI spec (YAML or JSON). Optionally, upload a JSON file containing the history from a previous deployment to edit existing resources
+3. **Step 2 — Configuration**: Enter the EDC Management API URL, service details, provider, catalog, upstream authentication, and ODRL policy level (Level 1/2/3/Custom)
+4. **Step 3 — Review**: Verify the preview of policies, assets, and Contract Definition. Edit the CD ID if necessary
+5. **Step 4 — Deploy**: Run the reconciliation. The app creates/updates/deletes the necessary resources in the EDC and displays the results
+6. **Download results**: The generated JSON can be downloaded and reused as a history for future deployments
 
-## API Endpoints
+## EDC API Endpoints
 
-| Método | Ruta | Descripción |
+| Method | URL | Description |
 |--------|------|-------------|
-| POST | `/api/parse-openapi` | Parsea spec OpenAPI, retorna operaciones |
-| POST | `/api/create-edc-resources` | Reconcilia recursos en EDC |
-| GET | `/api/configs` | Lista configuraciones guardadas |
-| GET | `/api/configs/:filename` | Obtiene una configuración guardada |
+| POST | `/api/parse-openapi` | Parses OpenAPI spec, returns operations |
+| POST | `/api/create-edc-resources` | Reconciles resources in EDC |
+| GET | `/api/configs` | Lists saved configurations |
+| GET | `/api/configs/:filename` | Retrieves a saved configuration |
 | GET | `/api/health` | Health check |
 
-## Integración via iframe (PostMessage)
+## Integration via iframe (PostMessage)
 
-La app se puede embeber en un iframe. La comunicación se hace via `postMessage`.
+The app can be embedded in an iframe. Communication is handled via `postMessage`.
 
-### Lo que necesita el form
+### What the form needs
 
 ```json
 {
-  "openapi_yaml_in_base64": "string (OBLIGATORIO)",
-  "history_b64": "string (OPCIONAL — config previo para editar)"
+  “openapi_yaml_in_base64”: “string (REQUIRED)”,
+  “history_b64”: “string (OPTIONAL — previous configuration for editing)”
 }
 ```
 
-### Lo que devuelve el form
+### What the form returns
 
 ```json
 {
-  "files": [
+  “files”: [
     {
-      "filename": "edc-config.json",
-      "content_in_base64": "string (JSON del resultado del deploy en base64)"
+      “filename”: “edc-config.json”,
+      “content_in_base64”: “string (JSON of the deployment result in base64)”
     }
   ]
 }
 ```
 
-## i18n
-
-Soporta Español (ES) e Inglés (EN). El idioma se guarda en `localStorage`.
-
 ## Tech Stack
 
 - **Backend**: Node.js + Express
-- **Frontend**: Vanilla JS (sin framework, sin bundler)
+- **Frontend**: Vanilla JS (no framework, no bundler)
 - **EDC API**: Management API v3 (JSON-LD payloads)
-- **Policies**: ODRL con contextos EDC + ODRL
-- **i18n**: Implementación custom con ES/EN
-
-## Procedimientos técnicos
-
-### Añadir un nuevo nivel de policy
-
-1. Definir las constantes del nivel en `public/js/policy-editor.js` (constraints, prohibiciones, obligaciones)
-2. Añadir las traducciones en `public/js/i18n.js` (claves ES/EN)
-3. Implementar la generación del payload en `server/policy-builder.js`
-4. Añadir el warning correspondiente en el editor si requiere extensiones Java
-
-### Añadir un nuevo módulo server
-
-1. Crear el archivo en `server/` con responsabilidad única (máx. 300 líneas)
-2. Usar CommonJS (`require`/`module.exports`)
-3. Importarlo desde `server.js` si expone rutas, o desde el módulo que lo consume
-4. No incluir lógica de negocio en `server.js` — solo routing
-
-### Añadir un nuevo archivo JS frontend
-
-1. Crear el archivo en `public/js/` con nombre en kebab-case
-2. Documentar en el header del archivo qué globals expone y de cuáles depende
-3. Añadir el `<script>` en `index.html` respetando el orden de dependencias:
-   `i18n.js` → `policy-editor.js` → `review.js` / `deploy.js` → `app.js`
-4. No usar ES modules — usar `<script>` clásicos con globals
-
-### Añadir traducciones
-
-1. Abrir `public/js/i18n.js`
-2. Añadir la clave en ambos objetos (`es` y `en`)
-3. Usar `t('clave')` en el código frontend para referenciarla
+- **Policies**: ODRL with EDC contexts + ODRL
+- **i18n**: Custom implementation with ES/EN
