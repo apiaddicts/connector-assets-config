@@ -1,7 +1,7 @@
 # Connector-Assets-Config
 
  ![Javascript](https://img.shields.io/badge/javascript-F7DF1E.svg?style=flat&logo=javascript&logoColor=white)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/apiaddicts/conector-assets-config)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/apiaddicts/connector-assets-config)
 
 Web app for configuring and deploying API assets in Eclipse Dataspace Connector (EDC), following the Gaia-X framework.
 
